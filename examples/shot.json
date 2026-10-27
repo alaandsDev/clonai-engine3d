@@ -1,0 +1,91 @@
+{
+  "id": "opening",
+  "durationSeconds": 3,
+  "narrationSegment": "Você abre a porta de casa",
+  "visualIntent": "Caio abre uma porta independente no inverno.",
+  "characters": [
+    {
+      "instanceId": "protagonist",
+      "position": [
+        0.7,
+        0,
+        0.1
+      ],
+      "resourceId": "CHAR_CAIO_001",
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    }
+  ],
+  "props": [
+    {
+      "instanceId": "door",
+      "resourceId": "PROP_DOOR_001",
+      "position": [
+        -0.4,
+        0,
+        0
+      ],
+      "continuityKey": "front-door",
+      "initialState": {
+        "openProgress": 0
+      },
+      "finalState": {
+        "openProgress": 1
+      },
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.9,
+        0.9,
+        0.9
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "resourceId": "ACTION_OPEN_DOOR_001",
+      "actor": "protagonist",
+      "target": "door",
+      "start": 0.15,
+      "end": 0.85
+    }
+  ],
+  "vfx": [
+    {
+      "resourceId": "VFX_SNOW_001",
+      "start": 0,
+      "end": 1,
+      "parameters": {
+        "intensity": 0.65
+      }
+    },
+    {
+      "resourceId": "VFX_COLD_BREATH_001",
+      "actor": "protagonist",
+      "anchor": "face",
+      "start": 0,
+      "end": 1
+    }
+  ],
+  "camera": {
+    "resourceId": "CAM_PUSH_IN_001",
+    "parameters": {
+      "strength": 0.4
+    }
+  },
+  "onScreenText": "O FRIO É BRUTAL",
+  "environment": {
+    "resourceId": "ENV_WINTER_001"
+  }
+}

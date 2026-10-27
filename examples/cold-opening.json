@@ -1,8 +1,141 @@
 {
- "id":"cold-opening","title":"O frio brutal","format":{"width":480,"height":854,"fps":30},"style":"stylized-cartoon","timingMode":"fixed","cast":{"protagonist":"CHAR_CAIO_001"},
- "scenes":[{"id":"winter","order":1,"narration":"[intenso] Você abre a porta de casa e o frio é tão brutal que até seus cílios começam a congelar.","environment":{"resourceId":"ENV_WINTER_001"},"shots":[
- {"id":"opening","order":1,"durationSeconds":3,"narrationSegment":"Você abre a porta de casa","visualIntent":"Caio abre uma porta independente no inverno.","characters":[{"instanceId":"protagonist","castId":"protagonist","position":[-0.65,0,0.1]}],"props":[{"instanceId":"door","resourceId":"PROP_DOOR_001","position":[0.85,0,0],"continuityKey":"front-door","initialState":{"openProgress":0},"finalState":{"openProgress":1}}],"actions":[{"resourceId":"ACTION_OPEN_DOOR_001","actor":"protagonist","target":"door","start":0.15,"end":0.85}],"vfx":[{"resourceId":"VFX_SNOW_001","start":0,"end":1,"parameters":{"intensity":0.65}},{"resourceId":"VFX_COLD_BREATH_001","actor":"protagonist","anchor":"face","start":0,"end":1}],"camera":{"resourceId":"CAM_PUSH_IN_001"},"onScreenText":"O FRIO É BRUTAL"},
- {"id":"frozen","order":2,"durationSeconds":5,"narrationSegment":"e o frio é tão brutal que até seus cílios começam a congelar","visualIntent":"Cristais se formam perto dos olhos de Caio.","characters":[{"instanceId":"protagonist","castId":"protagonist","position":[0,-0.55,1.6],"scale":[1.3,1.3,1.3]}],"props":[],"actions":[{"resourceId":"ACTION_IDLE_001","actor":"protagonist","start":0,"end":1}],"vfx":[{"resourceId":"VFX_SNOW_001","start":0,"end":1,"parameters":{"intensity":0.35}},{"resourceId":"VFX_COLD_BREATH_001","actor":"protagonist","anchor":"face","start":0,"end":1},{"resourceId":"VFX_FROST_001","actor":"protagonist","anchor":"face","start":0.05,"end":1}],"camera":{"resourceId":"CAM_STATIC_001"},"onScreenText":"ATÉ OS CÍLIOS CONGELAM"}
- ]}]
+  "id": "cold-opening",
+  "title": "O frio brutal",
+  "format": {
+    "width": 480,
+    "height": 854,
+    "fps": 30
+  },
+  "style": "stylized-cartoon",
+  "timingMode": "fixed",
+  "cast": {
+    "protagonist": "CHAR_CAIO_001"
+  },
+  "scenes": [
+    {
+      "id": "winter",
+      "order": 1,
+      "narration": "[intenso] Você abre a porta de casa e o frio é tão brutal que até seus cílios começam a congelar.",
+      "environment": {
+        "resourceId": "ENV_WINTER_001"
+      },
+      "shots": [
+        {
+          "id": "opening",
+          "order": 1,
+          "durationSeconds": 3,
+          "narrationSegment": "Você abre a porta de casa",
+          "visualIntent": "Caio abre uma porta independente no inverno.",
+          "characters": [
+            {
+              "instanceId": "protagonist",
+              "castId": "protagonist",
+              "position": [0.7, 0, 0.1]
+            }
+          ],
+          "props": [
+            {
+              "instanceId": "door",
+              "resourceId": "PROP_DOOR_001",
+              "position": [-0.4, 0, 0],
+              "continuityKey": "front-door",
+              "initialState": {
+                "openProgress": 0
+              },
+              "finalState": {
+                "openProgress": 1
+              },
+              "rotation": [0, 0, 0],
+              "scale": [0.9, 0.9, 0.9]
+            }
+          ],
+          "actions": [
+            {
+              "resourceId": "ACTION_OPEN_DOOR_001",
+              "actor": "protagonist",
+              "target": "door",
+              "start": 0.15,
+              "end": 0.85
+            }
+          ],
+          "vfx": [
+            {
+              "resourceId": "VFX_SNOW_001",
+              "start": 0,
+              "end": 1,
+              "parameters": {
+                "intensity": 0.65
+              }
+            },
+            {
+              "resourceId": "VFX_COLD_BREATH_001",
+              "actor": "protagonist",
+              "anchor": "face",
+              "start": 0,
+              "end": 1
+            }
+          ],
+          "camera": {
+            "resourceId": "CAM_PUSH_IN_001",
+            "parameters": {
+              "strength": 0.4
+            }
+          },
+          "onScreenText": "O FRIO É BRUTAL"
+        },
+        {
+          "id": "frozen",
+          "order": 2,
+          "durationSeconds": 5,
+          "narrationSegment": "e o frio é tão brutal que até seus cílios começam a congelar",
+          "visualIntent": "Cristais se formam perto dos olhos de Caio.",
+          "characters": [
+            {
+              "instanceId": "protagonist",
+              "castId": "protagonist",
+              "position": [0, -0.55, 1.6],
+              "scale": [1.3, 1.3, 1.3]
+            }
+          ],
+          "props": [],
+          "actions": [
+            {
+              "resourceId": "ACTION_IDLE_001",
+              "actor": "protagonist",
+              "start": 0,
+              "end": 1
+            }
+          ],
+          "vfx": [
+            {
+              "resourceId": "VFX_SNOW_001",
+              "start": 0,
+              "end": 1,
+              "parameters": {
+                "intensity": 0.35
+              }
+            },
+            {
+              "resourceId": "VFX_COLD_BREATH_001",
+              "actor": "protagonist",
+              "anchor": "face",
+              "start": 0,
+              "end": 1
+            },
+            {
+              "resourceId": "VFX_FROST_001",
+              "actor": "protagonist",
+              "anchor": "face",
+              "start": 0.05,
+              "end": 1
+            }
+          ],
+          "camera": {
+            "resourceId": "CAM_STATIC_001"
+          },
+          "onScreenText": "ATÉ OS CÍLIOS CONGELAM"
+        }
+      ]
+    }
+  ]
 }
-
