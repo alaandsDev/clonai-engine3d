@@ -7,7 +7,7 @@ export function normalizedSource(input: SourceInput, policy: ResearchPolicy): So
         throw Error('RESEARCH_SOURCE metadata');
     if (!['PRIMARY_OFFICIAL', 'PRIMARY_DATASET', 'ACADEMIC', 'INSTITUTIONAL', 'REFERENCE', 'NEWS', 'OTHER'].includes(input.sourceType) || !['STATIC_SOURCE_PACK', 'LOCAL_DOCUMENTS', 'WEB_SEARCH', 'OFFICIAL_API', 'CURATED_DATASET'].includes(input.provider))
         throw Error('RESEARCH_SOURCE type/provider');
-    if (!['text/plain', 'text/html', 'text/tab-separated-values'].includes(input.contentType) || input.content.includes('\0') || Buffer.byteLength(input.content, 'utf8') > policy.maxSourceBytes)
+    if (!['text/plain', 'text/html', 'text/tab-separated-values', 'text/csv'].includes(input.contentType) || input.content.includes('\0') || Buffer.byteLength(input.content, 'utf8') > policy.maxSourceBytes)
         throw Error('RESEARCH_SOURCE size/content type');
     if (contentHash(input.content) !== input.contentHash)
         throw Error('RESEARCH_SOURCE_HASH mismatch');

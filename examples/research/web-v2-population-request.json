@@ -1,0 +1,72 @@
+{
+  "request": {
+    "version": 1,
+    "id": "real-population-census-v2",
+    "topic": "População recenseada de municípios listados por população.",
+    "language": "pt-BR",
+    "researchGoal": "FACTS",
+    "desiredFactTypes": [
+      "QUANTITY"
+    ],
+    "constraints": {
+      "metric": "POPULATION"
+    },
+    "sourcePolicy": {
+      "minIndependentSources": 2,
+      "minPrimaryQuality": "MEDIUM",
+      "allowEnglishExtraction": true,
+      "maxSourceBytes": 2097152,
+      "maxTotalSourceBytes": 33554432,
+      "maxNormalizedCharacters": 524288,
+      "researchVersion": 2,
+      "factTypeQuorum": {
+        "QUANTITY": {
+          "minIndependentOrigins": 2,
+          "singleOriginAuthority": {
+            "sourceTypes": [
+              "PRIMARY_OFFICIAL",
+              "PRIMARY_DATASET",
+              "INSTITUTIONAL"
+            ],
+            "minGrade": "HIGH"
+          }
+        }
+      }
+    },
+    "maxSources": 24,
+    "maxEvidenceItems": 256
+  },
+  "web": {
+    "enabled": true,
+    "maxResearchRounds": 3,
+    "maxQueries": 16,
+    "maxResultsPerQuery": 3,
+    "maxSearchResults": 48,
+    "maxCandidateSources": 16,
+    "maxFetchedSources": 20,
+    "maxSourcesPerDomain": 8,
+    "maxBytesPerSource": 2097152,
+    "maxTotalBytes": 33554432,
+    "maxDurationMs": 480000,
+    "requestTimeoutMs": 30000,
+    "respectRobots": true,
+    "officialDomainHints": [],
+    "allowSessionScopeAdjustment": true,
+    "v2": {
+      "strategies": [
+        "MEDIAWIKI_REFERENCE_SEARCH",
+        "REFERENCE_FOLLOWING",
+        "WIKIDATA_ENTITY_DISCOVERY",
+        "OPENALEX_ACADEMIC_SEARCH"
+      ],
+      "budgets": {
+        "broadDiscovery": 4,
+        "originDiscovery": 10,
+        "verification": 2,
+        "corroboration": 4
+      },
+      "maxReferencesPerSource": 6,
+      "candidatePoolTarget": 6
+    }
+  }
+}

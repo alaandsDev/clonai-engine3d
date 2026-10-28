@@ -29,6 +29,53 @@ export interface WebResearchConfig {
     globalConcurrency: number;
     cachePolicy: 'REFRESH' | 'CACHED_REPLAY';
     allowSessionScopeAdjustment: boolean;
+    /** Phase 21 multi-source discovery; used only with sourcePolicy.researchVersion = 2. */
+    v2?: WebResearchV2Config;
+}
+export type DiscoveryStrategy = 'MEDIAWIKI_REFERENCE_SEARCH' | 'REFERENCE_FOLLOWING' | 'WIKIDATA_ENTITY_DISCOVERY' | 'OPENALEX_ACADEMIC_SEARCH';
+export type ResearchStage = 'BROAD_DISCOVERY' | 'ORIGIN_DISCOVERY' | 'VERIFICATION' | 'CORROBORATION';
+export interface WebResearchV2Config {
+    strategies: DiscoveryStrategy[];
+    /** Fetch attempts per stage; unused budget is reallocated deterministically to later stages. */
+    budgets: Record<'broadDiscovery' | 'originDiscovery' | 'verification' | 'corroboration', number>;
+    maxReferencesPerSource: number;
+    candidatePoolTarget: number;
+    wikidataEndpoint: string;
+    openAlexEndpoint: string;
+    followArchivedCopies: boolean;
+}
+export interface ReferenceCandidate {
+    id: string;
+    sourceId: string;
+    targetUrl: string;
+    anchorText: string;
+    contextSpan: { start: number; end: number; text: string } | null;
+    referenceType: 'FOOTNOTE_CITATION' | 'INLINE_LINK' | 'DATASET_LINK' | 'ARCHIVED_COPY' | 'PDF_DOCUMENT' | 'INSTITUTION_LINK';
+    researchQuestionIds: string[];
+    confidence: 'HIGH' | 'MEDIUM';
+    reason: string;
+    evidenceIds: string[];
+    subject: string | null;
+    gap: string;
+    archiveUrl: string | null;
+    priority: number;
+    status: 'PENDING' | 'FETCHED' | 'FAILED' | 'SKIPPED_BUDGET' | 'SKIPPED_SOURCE_CAP' | 'SKIPPED_FORMAT' | 'SKIPPED_DUPLICATE';
+    fetchAttemptIds: string[];
+}
+export interface ResearchGap {
+    code: 'SOURCE_DISCOVERY_GAP' | 'SOURCE_FETCH_GAP' | 'SOURCE_FORMAT_GAP' | 'EVIDENCE_EXTRACTION_GAP' | 'CORROBORATION_GAP' | 'FACT_CONFLICT' | 'VISUAL_GAP' | 'PRIMARY_SOURCE_DISCOVERED_BUT_PDF_UNSUPPORTED' | 'WRITER_REALIZATION_GAP';
+    subject: string | null;
+    url: string | null;
+    detail: string;
+}
+export interface ResearchSessionV2 {
+    version: string;
+    strategies: { kind: DiscoveryStrategy; executed: boolean; queries: number; results: number; candidates: number; diagnostics: string[] }[];
+    references: ReferenceCandidate[];
+    stageBudgets: { stage: ResearchStage; budget: number; used: number; reallocatedIn: number }[];
+    entityPool: { subject: string; provenance: 'DISCOVERED_FROM_SEARCH' | 'DISCOVERED_FROM_SOURCE'; firstSourceId: string | null; temperature: string; residency: string; corroboration: string; eligible: boolean }[];
+    gaps: ResearchGap[];
+    metrics: Record<string, number | string | string[]>;
 }
 export interface SearchQuery {
     id: string;
@@ -196,6 +243,8 @@ export interface ResearchSession {
         resultState: 'REAL_RESEARCH_READY' | 'REAL_RESEARCH_PARTIAL' | 'REAL_RESEARCH_BLOCKED';
         budgetStatus: string;
     };
+    /** Present only for researchVersion 2 sessions. */
+    v2?: ResearchSessionV2;
     processingFingerprint: string;
     fingerprint: string;
 }

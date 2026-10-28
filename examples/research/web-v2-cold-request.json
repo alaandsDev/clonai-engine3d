@@ -1,0 +1,88 @@
+{
+  "request": {
+    "version": 1,
+    "id": "real-cold-places-v2",
+    "topic": "Os cinco lugares mais frios onde pessoas vivem permanentemente.",
+    "language": "pt-BR",
+    "researchGoal": "RANKING",
+    "desiredFactTypes": [
+      "MEASUREMENT",
+      "RESIDENCY",
+      "RANKING"
+    ],
+    "constraints": {
+      "metric": "TEMPERATURE",
+      "qualifier": "MINIMUM_RECORDED",
+      "residencyCriterion": "PERMANENT_POPULATION",
+      "rankingCount": 5
+    },
+    "sourcePolicy": {
+      "minIndependentSources": 2,
+      "minPrimaryQuality": "MEDIUM",
+      "allowEnglishExtraction": true,
+      "maxSourceBytes": 2097152,
+      "maxTotalSourceBytes": 33554432,
+      "maxNormalizedCharacters": 524288,
+      "researchVersion": 2,
+      "factTypeQuorum": {
+        "MEASUREMENT": {
+          "minIndependentOrigins": 2,
+          "singleOriginAuthority": {
+            "sourceTypes": [
+              "PRIMARY_OFFICIAL",
+              "PRIMARY_DATASET"
+            ],
+            "minGrade": "HIGH"
+          }
+        },
+        "RESIDENCY": {
+          "minIndependentOrigins": 2,
+          "singleOriginAuthority": {
+            "sourceTypes": [
+              "PRIMARY_OFFICIAL",
+              "INSTITUTIONAL"
+            ],
+            "minGrade": "HIGH"
+          }
+        }
+      },
+      "evaluationDate": "2026-10-28",
+      "residencyMaxAgeYears": 15
+    },
+    "maxSources": 32,
+    "maxEvidenceItems": 256
+  },
+  "web": {
+    "enabled": true,
+    "maxResearchRounds": 4,
+    "maxQueries": 30,
+    "maxResultsPerQuery": 4,
+    "maxSearchResults": 80,
+    "maxCandidateSources": 24,
+    "maxFetchedSources": 36,
+    "maxSourcesPerDomain": 14,
+    "maxBytesPerSource": 2097152,
+    "maxTotalBytes": 33554432,
+    "maxDurationMs": 600000,
+    "requestTimeoutMs": 30000,
+    "respectRobots": true,
+    "officialDomainHints": [],
+    "allowSessionScopeAdjustment": true,
+    "v2": {
+      "strategies": [
+        "MEDIAWIKI_REFERENCE_SEARCH",
+        "REFERENCE_FOLLOWING",
+        "WIKIDATA_ENTITY_DISCOVERY",
+        "OPENALEX_ACADEMIC_SEARCH"
+      ],
+      "budgets": {
+        "broadDiscovery": 6,
+        "originDiscovery": 14,
+        "verification": 8,
+        "corroboration": 8
+      },
+      "maxReferencesPerSource": 6,
+      "candidatePoolTarget": 15
+    }
+  }
+}

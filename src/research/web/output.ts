@@ -2,6 +2,7 @@ import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { ResearchSession } from './contracts';
 import { SnapshotCache, cacheDiscovery } from './cache';
+import { corroborationReview, sourceGraphReview, structuredReview } from './review';
 // Review artifacts must display untrusted source data without embedding active HTML/media.
 const reviewData = (value: string) => value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/([\\`*_[\]!])/g, '\\$1');
 export async function saveResearchSession(session: ResearchSession, root: string, label: string) {
@@ -26,6 +27,21 @@ export async function saveResearchSession(session: ResearchSession, root: string
     await json('graphs', session.writer?.finalPreflight?.graph ?? null);
     await json('plans', session.writer?.finalPreflight?.plan ?? null);
     await json('analysis', session.quality);
+    if (session.v2 && p.v2) {
+        await json('references', session.v2.references);
+        await json('source-graphs', p.v2.sourceGraph);
+        await json('origin-groups', p.v2.originGroups);
+        await json('structured', p.v2.structures);
+        await json('tables', p.v2.structures.filter(s => s.kind === 'HTML_TABLE' || s.kind === 'KEY_VALUE').map(s => ({ ...s, evidence: p.evidence.filter(e => s.evidenceIds.includes(e.id)).map(e => ({ id: e.id, structured: e.structured, exactText: e.exactText, normalizedText: e.normalizedText, fact: e.supports })) })));
+        await json('datasets', p.v2.structures.filter(s => s.kind === 'DATASET'));
+        await json('evidence-quality', p.v2.evidenceAssessments);
+        await json('aliases', p.v2.aliases);
+        await json('analysis/v2', { metrics: session.v2.metrics, gaps: session.v2.gaps, stageBudgets: session.v2.stageBudgets, strategies: session.v2.strategies, entityPool: session.v2.entityPool, diagnostics: p.v2.diagnostics });
+        await mkdir(path.join(root, 'review'), { recursive: true });
+        await writeFile(path.join(root, 'review', label + '-source-graph.md'), sourceGraphReview(session, label));
+        await writeFile(path.join(root, 'review', label + '-corroboration.md'), corroborationReview(session, label));
+        await writeFile(path.join(root, 'review', label + '-structured-extraction.md'), structuredReview(session, label));
+    }
     await json('logs', session);
     const cache = new SnapshotCache(path.join(root, 'cache', 'snapshots'));
     for (const a of session.fetchAttempts)

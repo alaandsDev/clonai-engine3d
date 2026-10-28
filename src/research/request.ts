@@ -23,7 +23,8 @@ export function validateResearchRequest(r: ResearchRequest) {
             throw Error('RESEARCH_REQUEST ranking count');
         if (c.residencyCriterion !== undefined && !['PERMANENT_SETTLEMENT', 'PERMANENT_POPULATION', 'TEMPORARY_RESEARCH_STAFF', 'SEASONAL_PRESENCE'].includes(c.residencyCriterion))
             throw Error('RESEARCH_REQUEST residency');
-        if (c.metric !== undefined && c.metric !== 'TEMPERATURE')
+        // POPULATION counts exist only in the v2 extraction model.
+        if (c.metric !== undefined && c.metric !== 'TEMPERATURE' && !(c.metric === 'POPULATION' && r.sourcePolicy?.researchVersion === 2))
             throw Error('RESEARCH_REQUEST metric');
         for (const k of ['qualifier', 'temporalContext'] as const)
             if (c[k] !== undefined && (typeof c[k] !== 'string' || !c[k]!.trim()))
@@ -32,8 +33,26 @@ export function validateResearchRequest(r: ResearchRequest) {
     const p = r.sourcePolicy;
     if (p) {
         for (const k of Object.keys(p))
-            if (!['minIndependentSources', 'minPrimaryQuality', 'allowFahrenheitConversion', 'allowEnglishExtraction', 'temporalComparison', 'maxSourceBytes', 'maxTotalSourceBytes', 'maxNormalizedCharacters', 'evaluationDate'].includes(k))
+            if (!['minIndependentSources', 'minPrimaryQuality', 'allowFahrenheitConversion', 'allowEnglishExtraction', 'temporalComparison', 'maxSourceBytes', 'maxTotalSourceBytes', 'maxNormalizedCharacters', 'evaluationDate', 'researchVersion', 'factTypeQuorum', 'residencyMaxAgeYears'].includes(k))
                 throw Error('RESEARCH_POLICY unknown ' + k);
+        if (p.researchVersion !== undefined && p.researchVersion !== 1 && p.researchVersion !== 2)
+            throw Error('RESEARCH_POLICY version');
+        if ((p.factTypeQuorum !== undefined || p.residencyMaxAgeYears !== undefined) && p.researchVersion !== 2)
+            throw Error('RESEARCH_POLICY v2 fields require researchVersion 2');
+        if (p.residencyMaxAgeYears !== undefined && (!Number.isInteger(p.residencyMaxAgeYears) || p.residencyMaxAgeYears < 1 || p.residencyMaxAgeYears > 100))
+            throw Error('RESEARCH_POLICY residency age');
+        if (p.factTypeQuorum !== undefined) {
+            if (!p.factTypeQuorum || typeof p.factTypeQuorum !== 'object' || Array.isArray(p.factTypeQuorum))
+                throw Error('RESEARCH_POLICY fact quorum');
+            for (const [type, q] of Object.entries(p.factTypeQuorum)) {
+                if (!['MEASUREMENT', 'RESIDENCY', 'QUANTITY'].includes(type) || !q || Object.keys(q).some(k => !['minIndependentOrigins', 'singleOriginAuthority'].includes(k)) || !Number.isInteger(q.minIndependentOrigins) || q.minIndependentOrigins < 1 || q.minIndependentOrigins > 5)
+                    throw Error('RESEARCH_POLICY fact quorum ' + type);
+                const a = q.singleOriginAuthority;
+                // A single-origin admission is restricted to declared primary/institutional classes; reference/news/other can never stand alone.
+                if (a !== undefined && (!a || Object.keys(a).some(k => !['sourceTypes', 'minGrade'].includes(k)) || !Array.isArray(a.sourceTypes) || !a.sourceTypes.length || a.sourceTypes.some(t => !['PRIMARY_OFFICIAL', 'PRIMARY_DATASET', 'ACADEMIC', 'INSTITUTIONAL'].includes(t)) || !['HIGH', 'MEDIUM'].includes(a.minGrade)))
+                    throw Error('RESEARCH_POLICY single-origin authority ' + type);
+            }
+        }
         if (p.minIndependentSources !== undefined && (!Number.isInteger(p.minIndependentSources) || p.minIndependentSources < 1 || p.minIndependentSources > 5))
             throw Error('RESEARCH_POLICY quorum');
         if (p.minPrimaryQuality !== undefined && !['MEDIUM', 'HIGH'].includes(p.minPrimaryQuality))
@@ -45,7 +64,7 @@ export function validateResearchRequest(r: ResearchRequest) {
         if (p.temporalComparison !== undefined && !['SAME_CONTEXT', 'EXPLICIT_CROSS_PERIOD'].includes(p.temporalComparison))
             throw Error('RESEARCH_POLICY temporal');
         for (const k of ['maxSourceBytes', 'maxTotalSourceBytes', 'maxNormalizedCharacters'] as const)
-            if (p[k] !== undefined && (!Number.isInteger(p[k]) || p[k]! < 1 || p[k]! > (k === 'maxTotalSourceBytes' ? 16777216 : k === 'maxSourceBytes' ? 2097152 : 524288)))
+            if (p[k] !== undefined && (!Number.isInteger(p[k]) || p[k]! < 1 || p[k]! > (k === 'maxTotalSourceBytes' ? 33554432 : k === 'maxSourceBytes' ? 2097152 : 524288)))
                 throw Error('RESEARCH_POLICY size');
         if (p.evaluationDate !== undefined && p.evaluationDate !== null && !/^\d{4}-\d{2}-\d{2}$/.test(p.evaluationDate))
             throw Error('RESEARCH_POLICY evaluation date');

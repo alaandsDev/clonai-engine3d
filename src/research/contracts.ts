@@ -3,7 +3,8 @@ export const RESEARCH_VERSION = 'research-engine/1.0.0';
 export type SourceType = 'PRIMARY_OFFICIAL' | 'PRIMARY_DATASET' | 'ACADEMIC' | 'INSTITUTIONAL' | 'REFERENCE' | 'NEWS' | 'OTHER';
 export type ProviderType = 'STATIC_SOURCE_PACK' | 'LOCAL_DOCUMENTS' | 'WEB_SEARCH' | 'OFFICIAL_API' | 'CURATED_DATASET';
 export type FactType = 'ENTITY_EXISTENCE' | 'QUANTITY' | 'MEASUREMENT' | 'LOCATION' | 'STATE' | 'PROCESS' | 'RELATION' | 'COMPARISON' | 'RANKING' | 'TEMPORAL' | 'RESIDENCY' | 'DEFINITION';
-export type Residency = 'PERMANENT_SETTLEMENT' | 'PERMANENT_POPULATION' | 'TEMPORARY_RESEARCH_STAFF' | 'SEASONAL_PRESENCE';
+// Phase 21 adds RESEARCH_STAFF/TEMPORARY_STAFF/UNINHABITED. SEASONAL_POPULATION is represented by the existing SEASONAL_PRESENCE.
+export type Residency = 'PERMANENT_SETTLEMENT' | 'PERMANENT_POPULATION' | 'TEMPORARY_RESEARCH_STAFF' | 'SEASONAL_PRESENCE' | 'RESEARCH_STAFF' | 'TEMPORARY_STAFF' | 'UNINHABITED';
 export type FactStatus = 'EXTRACTED' | 'SUPPORTED' | 'CORROBORATED' | 'CONFLICTED' | 'INSUFFICIENT' | 'REJECTED';
 export interface ResearchPolicy {
     version: string;
@@ -16,6 +17,17 @@ export interface ResearchPolicy {
     maxNormalizedCharacters: number;
     evaluationDate: string | null;
     allowEnglishExtraction?: boolean;
+    /** Opt-in Phase 21 model: structured extraction, SourceGraph origin groups, corroboration/conflicts v2. Absent = Phase 19/20 behaviour. */
+    researchVersion?: 1 | 2;
+    /** Per fact type admission rule (v2 only). Absent = minIndependentSources for every type. */
+    factTypeQuorum?: Partial<Record<'MEASUREMENT' | 'RESIDENCY' | 'QUANTITY', FactTypeQuorum>>;
+    /** Residency currentness (v2): dated residency older than this, relative to evaluationDate, is not current. */
+    residencyMaxAgeYears?: number;
+}
+export interface FactTypeQuorum {
+    minIndependentOrigins: number;
+    /** A single non-derived origin may admit the fact when its declared class and grade satisfy this rule. */
+    singleOriginAuthority?: { sourceTypes: SourceType[]; minGrade: 'HIGH' | 'MEDIUM' };
 }
 export interface ResearchRequest {
     version: 1;
@@ -27,7 +39,7 @@ export interface ResearchRequest {
     constraints?: {
         rankingCount?: number;
         residencyCriterion?: Residency;
-        metric?: 'TEMPERATURE';
+        metric?: 'TEMPERATURE' | 'POPULATION';
         qualifier?: string;
         temporalContext?: string;
     };
@@ -65,7 +77,7 @@ export interface SourceInput {
     retrievedAt?: string;
     canonicalLocator: string;
     language: string;
-    contentType: 'text/plain' | 'text/html' | 'text/tab-separated-values';
+    contentType: 'text/plain' | 'text/html' | 'text/tab-separated-values' | 'text/csv';
     content: string;
     contentHash: string;
     metadata: {
@@ -77,10 +89,11 @@ export interface SourceInput {
     provenance: {
         originKey: string;
         sharedOriginKeys?: string[];
-        discovery?: {queryIds: string[]; requestedUrl: string; finalUrl: string};
+        discovery?: {queryIds: string[]; requestedUrl: string; finalUrl: string; via?: DiscoveryVia; referenceIds?: string[]; strategy?: string};
         description: string;
     };
 }
+export type DiscoveryVia = 'SEARCH_RESULT' | 'REFERENCE_LINK' | 'INSTITUTION_LINK' | 'ORIGIN_HINT' | 'FOLLOW_UP' | 'ARCHIVED_COPY';
 export interface SourceDocument extends SourceInput {
     normalized: {
         text: string;
@@ -115,9 +128,9 @@ export interface SourceQualityAssessment {
 }
 export interface Quantity {
     originalValue: string;
-    originalUnit: '°C' | '°F';
+    originalUnit: '°C' | '°F' | 'PERSONS';
     normalizedValue: number;
-    normalizedUnit: '°C' | '°F';
+    normalizedUnit: '°C' | '°F' | 'PERSONS';
     conversionRule: 'IDENTITY' | 'F_TO_C';
     precision: number;
     approximation: 'AS_REPORTED' | 'APPROXIMATE';
@@ -132,6 +145,21 @@ export interface CanonicalFact {
     temporalContext: string | null;
     qualifiers: string[];
     residency: Residency | null;
+    /** v2: observation window of a record (e.g. a table caption period); distinct from the event date in temporalContext. */
+    observationPeriod?: string | null;
+}
+export type StructuredKind = 'HTML_TABLE' | 'HTML_LIST' | 'DEFINITION_LIST' | 'KEY_VALUE' | 'DATASET';
+export interface StructuredProvenance {
+    kind: StructuredKind;
+    structureIndex: number;
+    row: number;
+    column: number;
+    rowHeader: string | null;
+    columnHeader: string | null;
+    headerSpans: SourceSpan[];
+    captionSpan: SourceSpan | null;
+    subjectSpan: SourceSpan | null;
+    unitSource: 'CELL' | 'HEADER' | 'CAPTION' | 'NONE';
 }
 export interface Evidence {
     version: 1;
@@ -144,7 +172,7 @@ export interface Evidence {
     supports: CanonicalFact;
     extractionConfidence: 'HIGH' | 'MEDIUM';
     truthStatus: 'EXTRACTED';
-    extractionMethod: 'LITERAL_PT_V1' | 'TABLE_PT_V1' | 'LITERAL_EN_V1';
+    extractionMethod: 'LITERAL_PT_V1' | 'TABLE_PT_V1' | 'LITERAL_EN_V1' | 'LITERAL_EN_V2' | 'TABLE_HTML_V2' | 'LIST_HTML_V2' | 'DEFINITION_HTML_V2' | 'KEY_VALUE_HTML_V2' | 'DATASET_V2';
     evidenceLanguage?: 'en';
     contextSpans?: SourceSpan[];
     contentHash: string;
@@ -154,6 +182,12 @@ export interface Evidence {
         headerContext: string;
         headerSpan: SourceSpan;
     } | null;
+    /** v2 only. */
+    structured?: StructuredProvenance;
+    /** v2 only: canonical footnote/inline reference URLs attached to this exact evidence. */
+    citations?: string[];
+    /** v2 only: assigned from the SourceGraph after extraction. */
+    originGroupId?: string;
     fingerprint: string;
 }
 export interface FactCandidate {
@@ -170,7 +204,7 @@ export interface FactConflict {
     evidenceA: string[];
     evidenceB: string[];
     factCandidateIds: string[];
-    conflictType: 'QUANTITY_DISAGREEMENT';
+    conflictType: 'QUANTITY_DISAGREEMENT' | 'VALUE_CONFLICT' | 'QUALIFIER_CONFLICT' | 'TEMPORAL_CONFLICT' | 'ENTITY_CONFLICT' | 'RESIDENCY_CONFLICT' | 'SOURCE_ORIGIN_CONFLICT';
     resolutionStatus: 'UNRESOLVED';
     reason: string;
 }
@@ -189,6 +223,8 @@ export interface GroundedFact {
     qualifiers: string[];
     usableForScript: boolean;
     usableForPrimaryClaim: boolean;
+    /** v2 only: evidence IDs per independent origin root, derivations and the preferred primary evidence. */
+    origins?: { roots: string[][]; derivedEvidenceIds: string[]; primaryEvidenceId: string | null; admission: string; supportScore: number };
     groundingFingerprint: string;
 }
 export interface RankingResult {
@@ -237,7 +273,69 @@ export interface EvidencePack {
     essentialFactIds: string[];
     coverage: Record<string, number>;
     quality: ResearchQualityReport;
+    /** Present only for researchVersion 2 packs. */
+    v2?: ResearchV2Section;
     fingerprint: string;
+}
+export type OriginRelationType = 'PRIMARY_ORIGIN' | 'DERIVED_FROM' | 'CITES' | 'REPORTS' | 'MIRRORS' | 'NEAR_COPY' | 'SAME_PUBLISHER' | 'UNKNOWN_RELATION';
+export interface OriginRelation {
+    id: string;
+    from: string;
+    to: string;
+    relation: OriginRelationType;
+    factId: string | null;
+    evidenceIds: string[];
+    reason: string;
+}
+export interface SourceGraph {
+    version: string;
+    nodes: { sourceId: string; locator: string; registrableDomain: string; publisher: string; sourceType: SourceType; originGroupId: string }[];
+    edges: OriginRelation[];
+    fingerprint: string;
+}
+export interface OriginGroup {
+    id: string;
+    sourceIds: string[];
+    evidenceIds: string[];
+    reasons: string[];
+}
+export type AliasStatus = 'CONFIRMED_ALIAS' | 'LIKELY_ALIAS' | 'AMBIGUOUS_ALIAS' | 'REJECTED_ALIAS';
+export interface AliasCandidate {
+    id: string;
+    name: string;
+    alias: string;
+    status: AliasStatus;
+    relation: 'ALSO_KNOWN_AS' | 'TRANSLITERATION' | 'LOCAL_NAME' | 'ABBREVIATION' | 'STRUCTURED_METADATA' | 'SIMILARITY_ONLY' | 'NOT_TO_BE_CONFUSED';
+    sourceId: string | null;
+    sourceSpan: SourceSpan | null;
+    reason: string;
+}
+export interface EvidenceQualityAssessment {
+    evidenceId: string;
+    grade: 'STRONG' | 'ADEQUATE' | 'WEAK';
+    breakdown: Record<'directness' | 'subjectClarity' | 'metricClarity' | 'qualifierClarity' | 'temporalClarity' | 'structuredContext' | 'extractability', { score: number; reason: string }>;
+    score: number;
+    fingerprint: string;
+}
+export interface StructuredSummary {
+    sourceId: string;
+    kind: StructuredKind;
+    index: number;
+    status: 'PARSED' | 'REJECTED';
+    reason: string;
+    rows: number;
+    columns: number;
+    caption: string | null;
+    evidenceIds: string[];
+}
+export interface ResearchV2Section {
+    version: string;
+    sourceGraph: SourceGraph;
+    originGroups: OriginGroup[];
+    evidenceAssessments: EvidenceQualityAssessment[];
+    aliases: AliasCandidate[];
+    structures: StructuredSummary[];
+    diagnostics: { code: string; subject: string | null; detail: string }[];
 }
 export interface ResearchQualityReport {
     sourceCount: number;

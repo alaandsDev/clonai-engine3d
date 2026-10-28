@@ -29,7 +29,7 @@ export function realizeGroundedFact(g: GroundedFact): string | null {
     }
     if (f.factType === 'RESIDENCY') {
         const phrases: Record<string, string> = { PERMANENT_POPULATION: 'possui população permanente', PERMANENT_SETTLEMENT: 'possui assentamento permanente', TEMPORARY_RESEARCH_STAFF: 'abriga pesquisadores temporariamente', SEASONAL_PRESENCE: 'possui presença sazonal' };
-        return f.residency ? 'A ' + lower(subject) + ' ' + phrases[f.residency] + (f.temporalContext ? ' em ' + f.temporalContext : '') + '.' : null;
+        return f.residency && phrases[f.residency] ? 'A ' + lower(subject) + ' ' + phrases[f.residency] + (f.temporalContext ? ' em ' + f.temporalContext : '') + '.' : null;
     }
     if (f.factType === 'PROCESS') {
         const prefix = f.qualifiers.includes('DEMO_EXPERIMENT') ? 'No ' + f.temporalContext + ', ' : 'No processo relatado' + (f.temporalContext ? ' no contexto ' + f.temporalContext : '') + ', ', noun = normalize(subject) === 'agua' ? 'a água' : normalize(subject) === 'nivel' ? 'o nível' : subject, object = f.object ?? '';

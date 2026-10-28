@@ -8,3 +8,4 @@ export * from './fetcher';
 export * from './cache';
 export * from './entities';
 export * from './provider';
+export * from './v2';

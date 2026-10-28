@@ -16,3 +16,17 @@ npm run check:web-research
 ```
 
 A READY research pack is separate from grounded-script selection, visual eligibility and measured production timing. Scope is limited to candidates discovered in the session; the system does not establish exhaustive global superlatives. No video is rendered automatically by these commands.
+
+# Web research v2 (Phase 21)
+
+A request with `sourcePolicy.researchVersion: 2` needs `web.v2` and runs `runWebResearchV2`: round 0 is broad discovery through the MediaWiki reference corpus; each further round runs VERIFICATION (the entity's own reference page for a missing fact family), ORIGIN_DISCOVERY (follow footnote/inline references attached to evidence of facts that still lack an origin) and CORROBORATION (Wikidata declared official website, OpenAlex works). Strategies are `MEDIAWIKI_REFERENCE_SEARCH`, `REFERENCE_FOLLOWING`, `WIKIDATA_ENTITY_DISCOVERY` and `OPENALEX_ACADEMIC_SEARCH` — all free, keyless public endpoints, each failure recorded while the others continue. A provider never decides the source class: classification happens after fetch (explicit domain hint, reference corpus, archived original, scholarly meta tags, JSON-LD publisher type; otherwise OTHER).
+
+`ReferenceCandidate` keeps sourceId, targetUrl, anchorText, contextSpan (the supported evidence), referenceType, researchQuestionIds, confidence, reason, evidenceIds and the gap it serves. Only references attached to evidence of entities with open gaps are followed (no crawl), at most `maxReferencesPerSource` per source; every link goes through the same canonicalization, DNS/IP pinning, redirect, robots, MIME and size checks. PDFs are not fetched (`PDF_SOURCE_UNSUPPORTED`, reported as `PRIMARY_SOURCE_DISCOVERED_BUT_PDF_UNSUPPORTED` for institution-like hosts). A dead original may be retried through its archived copy, which is the same origin (MIRRORS).
+
+Stage budgets (`broadDiscovery`, `originDiscovery`, `verification`, `corroboration`) are fetch attempts whose sum may not exceed `maxFetchedSources`; a stage with nothing actionable passes its remainder to the next stage in that order (`BUDGET_REALLOCATED` diagnostic). Ready entities are skipped. The session's `v2` section records strategies, references, stage budgets, the entity pool, typed gaps (SOURCE_DISCOVERY/FETCH/FORMAT, EVIDENCE_EXTRACTION, CORROBORATION, FACT_CONFLICT, VISUAL, WRITER_REALIZATION) and diversity/corroboration/structured metrics. In v2 the fetcher also detects English by function-word frequency when a page declares no language, and flags direct evidence from a value+unit, a unit header or explicit presence/census wording.
+
+```powershell
+npm run research:web -- examples/research/web-v2-cold-request.json out/engine3d/phase21
+npm run research:web:replay -- out/engine3d/phase21/logs/real-cold-places-v2.json out/engine3d/phase21
+npm run check:research-v2
+```

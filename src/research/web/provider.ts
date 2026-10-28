@@ -6,7 +6,8 @@ import { normalizedSource } from '../source';
 import { normalize } from '../../semantics/normalize';
 import { writeGroundedTopic } from '../../writer/grounded';
 import type { ResearchRequest, EvidencePack } from '../contracts';
-import type { ResearchSession, SearchProvider, WebEnvironment, WebResearchConfig } from './contracts';
+import type { DiscoveryStrategy, ResearchGap, ResearchSession, SearchProvider, WebEnvironment, WebResearchConfig } from './contracts';
+import { runWebResearchV2, WEB_RESEARCH_V2_VERSION } from './v2';
 import { webConfig } from './config';
 import { SecureHttpClient, nodeEnvironment } from './http';
 import { MediaWikiSearchProvider, candidateSources } from './search';
@@ -17,14 +18,39 @@ import { discoverEntities } from './entities';
 function scopeFor(request: ResearchRequest, config: WebResearchConfig) { const ranking = request.researchGoal === 'RANKING', superlative = /mais frio|coldest|mundo|global|world/.test(normalize(request.topic)); return { title: ranking ? 'Comparação entre candidatos encontrados nesta sessão' : request.topic, scope: 'SESSION_CANDIDATES' as const, adjustment: ranking && superlative ? 'SUPERLATIVE_SCOPE_ADJUSTMENT: GLOBAL_SUPERLATIVE_NOT_ESTABLISHED; finite session candidates only; no exhaustive world ranking' : null, humanReviewRequired: ranking && superlative && !config.allowSessionScopeAdjustment }; }
 function write(pack: EvidencePack, scope: ResearchSession['scope']) { return scope.humanReviewRequired ? null : writeGroundedTopic({ version: 1, id: 'web-grounded-' + pack.fingerprint.slice(0, 16), topic: pack.topic, language: 'pt-BR', factPolicy: 'GROUNDED_ONLY', targetWords: { min: 110, max: 160 } }, pack); }
 export function processingFingerprint(pack: EvidencePack, writer: ResearchSession['writer'], scope: ResearchSession['scope']) { return jsonHash({ pack: pack.fingerprint, ranking: pack.ranking?.fingerprint ?? null, script: writer?.finalCandidate?.fingerprint ?? null, plan: writer?.finalPreflight?.plan.fingerprint ?? null, writer: writer?.fingerprint ?? null, scope }); }
+/** Phase 21 session assembly: same final pack/writer/scope contract as v1, plus discovery, references, gaps and metrics. */
+function finishV2(a: Parameters<Parameters<typeof runWebResearchV2>[3]>[0]): ResearchSession {
+    const pack = buildEvidencePack(a.request, { version: 1, id: 'web-session-final', fixture: false, labels: ['REAL_WEB_SNAPSHOTS', 'SESSION_CANDIDATES_ONLY'], sources: a.acquired });
+    validateEvidencePack(pack);
+    const scope = scopeFor(a.request, a.config), writer = write(pack, scope), entities = discoverEntities(pack, a.candidates, a.results), diagnostics = [...a.diagnostics], writerGaps: ResearchGap[] = [];
+    if (pack.quality.productionEligibility === 'RESEARCH_READY' && writer && !writer.finalCandidate)
+        writerGaps.push({ code: 'WRITER_REALIZATION_GAP', subject: null, url: null, detail: 'Research-ready facts have no licensed realization in the existing GROUNDED_ONLY writer (no Writer v2 in this phase)' });
+    for (const m of writer?.finalPreflight?.matrix ?? [])
+        if (m.visualProof !== 'DIRECT' || m.gap)
+            writerGaps.push({ code: 'VISUAL_GAP', subject: null, url: null, detail: m.claimId + ' ' + (m.gap ?? m.visualProof) });
+    const exhausted = a.env.now() - a.start >= a.config.maxDurationMs || a.client.bytes >= a.config.maxTotalBytes || a.attempts.length >= a.config.maxFetchedSources || a.rounds === a.config.maxResearchRounds && pack.ranking?.status !== 'VALID' && pack.quality.productionEligibility !== 'RESEARCH_READY';
+    if (exhausted)
+        diagnostics.push('RESEARCH_BUDGET_EXHAUSTED');
+    if (scope.humanReviewRequired)
+        diagnostics.push('HUMAN_REVIEW_REQUIRED_SCOPE_ADJUSTMENT');
+    const quality: ResearchSession['quality'] = { queries: a.queries.length, results: a.results.length, uniqueDomains: new Set(a.results.map(r => r.displayDomain)).size, candidateSources: a.candidates.length, fetchAttempts: a.attempts.length, successfulFetches: a.attempts.filter(x => x.httpStatus === 200 && x.snapshot).length, acceptedSources: a.acquired.length, rejectedSources: a.rejected.length, discoveredEntities: entities.filter(e => e.provenance === 'DISCOVERED_FROM_SOURCE').length, groundedFacts: pack.quality.groundedFactCount, corroboratedFacts: pack.quality.corroboratedFactCount, conflicts: pack.conflicts.length, researchCoverage: pack.quality.criticalCoverage, budgetUsage: { bytes: a.client.bytes, elapsedMs: a.env.now() - a.start, rounds: a.rounds }, liveOrReplay: 'LIVE_DISCOVERY', resultState: pack.quality.productionEligibility === 'RESEARCH_READY' && !scope.humanReviewRequired ? 'REAL_RESEARCH_READY' : pack.quality.groundedFactCount ? 'REAL_RESEARCH_PARTIAL' : 'REAL_RESEARCH_BLOCKED', budgetStatus: exhausted ? 'RESEARCH_BUDGET_EXHAUSTED' : 'COVERAGE_STOP' };
+    const raw = { version: WEB_RESEARCH_V2_VERSION, mode: 'LIVE_DISCOVERY' as const, request: structuredClone(a.request), config: a.config, plan: a.plan, queryPlan: a.queries, searchResults: a.results, searchTrace: a.trace, candidateSources: a.candidates, fetchAttempts: a.attempts, acceptedSources: a.acquired, rejectedSources: a.rejected, entities, EvidencePack: pack, writer, diagnostics: [...new Set(diagnostics)], scope, quality, v2: a.v2(pack, writerGaps), processingFingerprint: processingFingerprint(pack, writer, scope) };
+    return { ...raw, fingerprint: jsonHash(raw) };
+}
 export async function runWebResearch(request: ResearchRequest, input: Partial<WebResearchConfig>, options: {
     env?: WebEnvironment;
     searchProvider?: SearchProvider;
     cache?: SnapshotCache;
+    extraProviders?: Partial<Record<DiscoveryStrategy, SearchProvider>>;
 } = {}): Promise<ResearchSession> {
     const config = webConfig(input);
     if (!config.enabled || config.cachePolicy === 'CACHED_REPLAY')
         throw Error('WEB_DISABLED_OR_REPLAY_REQUIRES_SESSION');
+    if (request.sourcePolicy?.researchVersion === 2) {
+        if (!config.v2)
+            throw Error('WEB_V2_CONFIG_REQUIRED researchVersion 2 needs web.v2');
+        return runWebResearchV2(request, config, options, finishV2);
+    }
     const plan = planResearch(request), env = options.env ?? nodeEnvironment, start = env.now(), client = new SecureHttpClient(config, env);
     client.deadline = start + config.maxDurationMs;
     const search = options.searchProvider ?? new MediaWikiSearchProvider(client), provider = new WebSourceProvider(client, options.cache), scope = scopeFor(request, config);
