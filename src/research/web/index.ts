@@ -9,3 +9,4 @@ export * from './cache';
 export * from './entities';
 export * from './provider';
 export * from './v2';
+export * from './v3';

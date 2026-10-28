@@ -20,8 +20,8 @@ function residencyV2(t: string): { residency: Residency; historical: boolean; ye
     const historical = /\b(?:was|were|had been|used to be|formerly)\b/i.test(t) && !/\b(?:is|are|has|have|remains|currently|today|still)\b/i.test(t) && residency !== 'UNINHABITED';
     return { residency, historical, year: t.match(/\b(?:as of|in|since|by)\s+((?:1[6-9]|20)\d{2})\b/)?.[1] ?? null };
 }
-export function extractEnglish(s: SourceDocument, policy: ResearchPolicy, maxItems: number, version: 1 | 2 = 1) {
-    const v2 = version === 2;
+export function extractEnglish(s: SourceDocument, policy: ResearchPolicy, maxItems: number, version: 1 | 2 | 3 = 1) {
+    const v2 = version >= 2;
     const evidence: Evidence[] = [], candidates: FactCandidate[] = [];
     const text = s.normalized.text;
     const heading = s.content.match(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i);
@@ -34,7 +34,7 @@ export function extractEnglish(s: SourceDocument, policy: ResearchPolicy, maxIte
     const add = (fact: CanonicalFact, start: number, end: number, useContext: boolean) => {
         if (evidence.length >= maxItems)
             throw Error('RESEARCH_EVIDENCE_BUDGET');
-        const span = sourceSpan(s, start, end), raw = { version: 1 as const, id: 'EV_' + jsonHash({ source: s.id, hash: s.contentHash, span, type: fact.factType }).slice(0, 20), sourceId: s.id, sourceSpan: span, exactText: span.text, normalizedText: text.slice(start, end), evidenceType: fact.factType, supports: fact, extractionConfidence: 'HIGH' as const, truthStatus: 'EXTRACTED' as const, extractionMethod: v2 ? 'LITERAL_EN_V2' as const : 'LITERAL_EN_V1' as const, evidenceLanguage: 'en' as const, contextSpans: useContext ? context : [], contentHash: s.contentHash, table: null };
+        const span = sourceSpan(s, start, end), raw = { version: 1 as const, id: 'EV_' + jsonHash({ source: s.id, hash: s.contentHash, span, type: fact.factType, ...(fact.sharedRecordId ? { subject: fact.subject } : {}) }).slice(0, 20), sourceId: s.id, sourceSpan: span, exactText: span.text, normalizedText: text.slice(start, end), evidenceType: fact.factType, supports: fact, extractionConfidence: 'HIGH' as const, truthStatus: 'EXTRACTED' as const, extractionMethod: v2 ? 'LITERAL_EN_V2' as const : 'LITERAL_EN_V1' as const, evidenceLanguage: 'en' as const, contextSpans: useContext ? context : [], contentHash: s.contentHash, table: null };
         const e = { ...raw, fingerprint: jsonHash(raw) };
         evidence.push(e);
         const fc = { id: 'FC_' + jsonHash({ fact, evidence: e.id }).slice(0, 20), canonicalFact: fact, evidenceIds: [e.id], extractionConfidence: 'HIGH' as const, status: 'EXTRACTED' as const };
@@ -45,6 +45,18 @@ export function extractEnglish(s: SourceDocument, policy: ResearchPolicy, maxIte
             const sentence = part[0].trim(), at = line.index! + part.index! + part[0].indexOf(sentence), t = clean(sentence);
             if (!t || t.length > 1400 || /ignore|instruction|system prompt|execute|\?|\b(?:not|never|could|might|may|unofficial|unconfirmed|disputed|unverified|claimed)\b/i.test(t))
                 continue;
+            // v3: an explicit tie ("A and B share the … record of V") yields one fact per subject with a shared record id;
+            // "A / B" formatting alone never does.
+            const tie = version === 3 ? t.match(new RegExp('^(' + name_ + ') and (' + name_ + ') (?:share|shared|jointly hold|jointly held|hold jointly)\\b[^.]{0,80}?\\brecord\\b[^.]{0,40}?\\bof\\s+([−–-]?\\s?\\d+(?:\\.\\d+)?)\\s*°\\s*([CF])', 'u')) : null;
+            if (tie) {
+                const tq = temperatureQualifiers(t.replace(/([−–-]?\s*\d+(?:\.\d+)?)\s*°\s*([CF])/g, ' ')), qualifiers = tq?.supported && tq.qualifiers.length ? tq.qualifiers : ['MINIMUM_RECORDED'];
+                if (/\b(?:low|lowest|cold|coldest|minimum)\b/i.test(t)) {
+                    const quantity = normalizeQuantity(tie[3].replace(/[−–]/g, '-').replace(/\s/g, ''), tie[4] === 'C' ? '°C' : '°F', false, policy), sharedRecordId = 'SR_' + jsonHash({ source: s.id, at, subjects: [tie[1], tie[2]].sort() }).slice(0, 16);
+                    for (const subject of [tie[1], tie[2]])
+                        add({ factType: 'MEASUREMENT', subject, predicate: 'MEASURED_TEMPERATURE', object: null, quantity, metric: 'TEMPERATURE', temporalContext: null, qualifiers, residency: null, sharedRecordId }, at, at + sentence.length, false);
+                }
+                continue;
+            }
             const matched = t.match(v2 ? /^([\p{Lu}][\p{L}\p{M}'’ .-]{1,70}?)\s+(?:recorded|has|had|experiences|is|was|holds|remains)\b/u : /^([\p{Lu}][\p{L}\p{M}'’ .-]{1,70}?)\s+(?:recorded|has|had|experiences|is|was)\b/u)?.[1];
             // v2 explicit subjects: "… recorded in X", "The population of X …" and an appositive "X, <phrase>, is/has/recorded …".
             const located = v2 ? t.match(new RegExp('^(?:The )?(?:lowest|coldest|minimum)[\\w\\s-]{0,40}?temperatures?\\s+(?:ever\\s+)?(?:officially\\s+)?(?:recorded|measured|observed)\\s+(?:in|at)\\s+(' + name_ + ')\\b', 'u'))?.[1] ?? t.match(new RegExp('^The population of (' + name_ + ')\\s+(?:was|is|stood)\\b', 'u'))?.[1] ?? t.match(new RegExp('^(' + name_ + '),\\s+[^,]{1,80},\\s+(?:is|has|had|was|recorded|remains|holds)\\b', 'u'))?.[1] ?? null : null;

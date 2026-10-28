@@ -1,7 +1,7 @@
 import { normalize } from '../semantics/normalize';
 import type { SourceSpan } from '../semantics/contracts';
 import { canonicalUrl } from './web/security';
-import type { CanonicalFact, Quantity, ResearchPolicy, Residency, SourceDocument, StructuredKind, StructuredProvenance, StructuredSummary } from './contracts';
+import type { CanonicalFact, Quantity, ResearchPolicy, Residency, SourceDocument, StructuredKind, StructuredProvenance, StructuredSummary, SubjectSource } from './contracts';
 // Phase 21 structured extraction. Markup is tokenized as data; nothing is executed, fetched or rendered.
 // Every value keeps a raw-content span; headers, captions and subjects keep their own spans.
 export const STRUCTURED_LIMITS = { maxTablesPerSource: 64, maxRowsPerTable: 400, maxColumnsPerTable: 40, maxSpan: 40, maxCellChars: 2000, maxListsPerSource: 128, maxItemsPerList: 300, maxDefinitionListsPerSource: 64, maxDatasetRows: 5000, maxDatasetColumns: 64, maxJsonLdBlocks: 4, maxJsonLdBytes: 65536, maxJsonLdDepth: 8, maxCitationsPerEvidence: 12, maxFragmentChars: 20000 };
@@ -49,12 +49,14 @@ export interface ParsedHtml {
     definitions: DefinitionList[];
     h1: { text: string; span: SourceSpan } | null;
     jsonLd: { span: SourceSpan; value: unknown; error: string | null }[];
+    /** Every h1–h4 in document order (used by the v3 DocumentContext). */
+    headings: { level: number; text: string; span: SourceSpan }[];
 }
 export interface StructuredFact {
     fact: CanonicalFact;
     span: SourceSpan;
     normalizedText: string;
-    method: 'TABLE_HTML_V2' | 'LIST_HTML_V2' | 'DEFINITION_HTML_V2' | 'KEY_VALUE_HTML_V2' | 'DATASET_V2';
+    method: 'TABLE_HTML_V2' | 'LIST_HTML_V2' | 'DEFINITION_HTML_V2' | 'KEY_VALUE_HTML_V2' | 'DATASET_V2' | 'RECORD_HTML_V3';
     structured: StructuredProvenance;
     contextSpans: SourceSpan[];
     anchors: string[];
@@ -86,7 +88,7 @@ interface Sink {
     links: string[];
 }
 export function parseHtmlStructures(raw: string, sourceHost: string | null): ParsedHtml {
-    const out: ParsedHtml = { grids: [], lists: [], definitions: [], h1: null, jsonLd: [] };
+    const out: ParsedHtml = { grids: [], lists: [], definitions: [], h1: null, jsonLd: [], headings: [] };
     const tables: { grid: StructuredGrid; row: StructuredCell[] | null; cell: { sink: Sink; tag: Record<string, string>; header: boolean } | null; caption: Sink | null; start: number }[] = [];
     const lists: { list: StructuredList; item: Sink | null }[] = [], dls: { dl: DefinitionList; term: Sink | null; termItem: StructuredItem | null; dd: Sink | null }[] = [];
     const sinks: Sink[] = [];
@@ -280,6 +282,7 @@ export function parseHtmlStructures(raw: string, sourceHost: string | null): Par
             else if (heading) {
                 pop(heading.sink);
                 const value = { text: cleanText(heading.sink.text), span: span(raw, heading.sink.start, at) };
+                out.headings.push({ level: heading.level, ...value });
                 if (heading.level === 1 && !out.h1)
                     out.h1 = value;
                 else if (heading.level > 1)
@@ -394,6 +397,13 @@ export function temperatureQualifiers(label: string): { qualifiers: string[]; su
     const high = /record high|\bhighest\b|\bmaximum\b|\bmax\b|\bhighs?\b|mean maximum|\bmaxima\b|warmest|hottest/.test(n);
     if (high && !recordLow)
         return { qualifiers: [], supported: false, reason: 'MAXIMUM_NOT_SUPPORTED' };
+    // Phase 22: "lowest maximum"/"highest minimum", day counts and time-of-day means are other statistics, not these qualifiers.
+    if (recordLow && high || /\bhighest minimum\b/.test(n))
+        return { qualifiers: [], supported: false, reason: 'STATISTIC_NOT_SUPPORTED lowest-maximum/highest-minimum' };
+    if (/\b(?:number of days|days? (?:of|with|>=|<=|≥|≤|above|below))\b|\bdays\b.*[≥≤<>]/.test(n))
+        return { qualifiers: [], supported: false, reason: 'STATISTIC_NOT_SUPPORTED day count' };
+    if (/\b\d{1,2}\s?(?:am|pm)\b|\bat \d{1,2}(?::\d\d)?\b/.test(n))
+        return { qualifiers: [], supported: false, reason: 'STATISTIC_NOT_SUPPORTED time-of-day mean' };
     if (recordLow)
         return { qualifiers: [satellite ? 'SATELLITE_ESTIMATE' : surface ? 'SURFACE_TEMPERATURE_MINIMUM' : 'MINIMUM_RECORDED'], supported: true, reason: satellite || surface ? 'Surface/satellite minimum kept apart from recorded air minimum' : 'Explicit record-low label' };
     if (/monthly min|mean monthly minimum|minima mensal/.test(n))
@@ -439,7 +449,7 @@ export function classifyHeader(text: string): ColumnRole {
         return { ...base, role: 'RESIDENCY', reason: 'Residency/presence header' };
     const t = temperatureQualifiers(text);
     if (t)
-        return t.supported ? { ...base, role: 'TEMPERATURE', qualifiers: t.qualifiers, reason: t.reason } : { ...base, role: t.reason === 'MAXIMUM_NOT_SUPPORTED' ? 'UNSUPPORTED_METRIC' : 'AMBIGUOUS_METRIC', reason: t.reason };
+        return t.supported ? { ...base, role: 'TEMPERATURE', qualifiers: t.qualifiers, reason: t.reason } : { ...base, role: /NOT_SUPPORTED/.test(t.reason) ? 'UNSUPPORTED_METRIC' : 'AMBIGUOUS_METRIC', reason: t.reason };
     return { ...base, role: 'UNKNOWN', reason: 'No supported header semantics' };
 }
 // ---------- value parsing ----------
@@ -522,7 +532,13 @@ export interface GridInterpretation {
     facts: StructuredFact[];
 }
 /** Interprets a grid with restricted header semantics. Unknown, ambiguous or unresolvable structures abstain with a reason. */
-export function interpretGrid(raw: string, grid: StructuredGrid, policy: ResearchPolicy, language: string, docSubject: { name: string; spans: SourceSpan[] } | null): GridInterpretation {
+/** v3: a subject inherited from the DocumentContext for a table that names none itself. */
+export type InheritedSubject = { name: string; kind: 'STATION' | 'PLACE'; source: SubjectSource; spans: SourceSpan[] } | { ambiguity: string };
+export interface GridOptions {
+    version: 3;
+    inherit: (grid: StructuredGrid) => InheritedSubject | null;
+}
+export function interpretGrid(raw: string, grid: StructuredGrid, policy: ResearchPolicy, language: string, docSubject: { name: string; spans: SourceSpan[] } | null, options?: GridOptions): GridInterpretation {
     const kind: StructuredKind = grid.kind, summary = (status: 'PARSED' | 'REJECTED', reason: string, rows = grid.rows.length, columns = 0) => ({ kind, index: grid.index, status, reason, rows, columns, caption: grid.caption?.text ?? null });
     if (grid.rejected)
         return { summary: summary('REJECTED', grid.rejected), facts: [] };
@@ -539,7 +555,8 @@ export function interpretGrid(raw: string, grid: StructuredGrid, policy: Researc
     if (kind === 'DATASET')
         headerRows = 1;
     else
-        while (first + headerRows < slots.length && slots[first + headerRows].every(s => s.cell.header) && headerRows < 4)
+        // v3: after the first header row, a row led by a cell spanning half the table is a section label, not a header level.
+        while (first + headerRows < slots.length && slots[first + headerRows].every(s => s.cell.header) && headerRows < 4 && !(options?.version === 3 && headerRows > 0 && slots[first + headerRows][0].cell.colspan * 2 >= width))
             headerRows++;
     const body = slots.slice(first + headerRows), facts: StructuredFact[] = [];
     const ctxSpans = (extra: SourceSpan[]) => [...(title ? [title.span] : []), ...extra].filter((s, i, a) => s.end > s.start && a.findIndex(x => x.start === s.start && x.end === s.end) === i);
@@ -547,7 +564,7 @@ export function interpretGrid(raw: string, grid: StructuredGrid, policy: Researc
     // Both also carry the dataset attribution stated in the section text that introduces the table.
     const attribution = kind === 'HTML_TABLE' ? tableAttributionAnchors(raw, grid.span.start) : [];
     const headerAnchors = [...slots.slice(0, first + headerRows).flat().flatMap(s => s.cell.anchors), ...attribution];
-    const make = (f: CanonicalFact, cell: StructuredCell, r: number, c: number, rowHeader: StructuredCell | null, colHeader: { text: string; spans: SourceSpan[] } | null, subject: SourceSpan | null, unitSource: StructuredProvenance['unitSource'], m: StructuredFact['method'], extraContext: SourceSpan[], anchors: string[]) => { const headerSpans = [...(colHeader?.spans ?? []), ...(rowHeader ? [rowHeader.span] : [])]; facts.push({ fact: f, span: cell.span, normalizedText: cell.text, method: m, structured: { kind: m === 'KEY_VALUE_HTML_V2' ? 'KEY_VALUE' : kind, structureIndex: grid.index, row: r, column: c, rowHeader: rowHeader?.text ?? null, columnHeader: colHeader?.text ?? null, headerSpans, captionSpan: title?.span ?? null, subjectSpan: subject, unitSource }, contextSpans: ctxSpans([...headerSpans, ...(subject ? [subject] : []), ...extraContext]), anchors: [...new Set([...cell.anchors, ...anchors])], links: cell.links, headerSpan: headerSpans[0] ?? null }); };
+    const make = (f: CanonicalFact, cell: StructuredCell, r: number, c: number, rowHeader: StructuredCell | null, colHeader: { text: string; spans: SourceSpan[] } | null, subject: SourceSpan | null, unitSource: StructuredProvenance['unitSource'], m: StructuredFact['method'], extraContext: SourceSpan[], anchors: string[], subjectSource?: SubjectSource) => { const headerSpans = [...(colHeader?.spans ?? []), ...(rowHeader ? [rowHeader.span] : [])]; facts.push({ fact: f, span: cell.span, normalizedText: cell.text, method: m, structured: { kind: m === 'KEY_VALUE_HTML_V2' ? 'KEY_VALUE' : kind, structureIndex: grid.index, row: r, column: c, rowHeader: rowHeader?.text ?? null, columnHeader: colHeader?.text ?? null, headerSpans, captionSpan: title?.span ?? null, subjectSpan: subject, unitSource, ...(subjectSource ? { subjectSource } : {}) }, contextSpans: ctxSpans([...headerSpans, ...(subject ? [subject] : []), ...extraContext]), anchors: [...new Set([...cell.anchors, ...anchors])], links: cell.links, headerSpan: headerSpans[0] ?? null }); };
     // Key/value structures (infobox-like): label/value rows, optionally separated by full-width section rows.
     const kvRows = slots.slice(first), pairs = kvRows.filter(r => r[0].cell !== r[1]?.cell);
     const kv = width === 2 && pairs.length >= 2 && pairs.every(r => r[0].cell.header && !r[1].cell.header);
@@ -597,19 +614,26 @@ export function interpretGrid(raw: string, grid: StructuredGrid, policy: Researc
     const roles = headers.map(h => classifyHeader(h.text)), captionUnit = title ? headerUnit(title.text) : null;
     // Transposed metric tables: row headers carry metrics and an explicit annual column carries the aggregate.
     const annual = headers.findIndex((h, i) => i > 0 && /^(?:year|annual|ano|anual)$/i.test(cleanText(h.text.split(' / ').at(-1) ?? '')));
-    const rowMetrics = body.filter(r => r[0].cell.header && classifyHeader(r[0].cell.text).role === 'TEMPERATURE');
+    // v3 accepts metric row labels written as plain cells (many official tables use <td> labels).
+    const rowLabel = (r: Slot[]) => (r[0].cell.header || options?.version === 3) && classifyHeader(r[0].cell.text).role === 'TEMPERATURE';
+    const rowMetrics = body.filter(rowLabel);
     if (annual > 0 && rowMetrics.length) {
         const named = title ? titleSubject(title.text) : null;
-        if (!named)
-            return { summary: summary('REJECTED', 'TABLE_SUBJECT_AMBIGUOUS transposed table without explicit subject title', body.length, width), facts: [] };
-        const subject = subjectSpan(raw, title!.span, named.subject);
+        // v3: a table without its own subject may inherit one only when the DocumentContext resolves it unambiguously.
+        const inherited = !named && options ? options.inherit(grid) : null;
+        if (!named && (!inherited || 'ambiguity' in inherited))
+            return { summary: summary('REJECTED', inherited && 'ambiguity' in inherited ? inherited.ambiguity : 'TABLE_SUBJECT_AMBIGUOUS transposed table without explicit subject title', body.length, width), facts: [] };
+        const ctx = inherited && !('ambiguity' in inherited) ? inherited : null, subjectName = named?.subject ?? ctx!.name, subject = named ? subjectSpan(raw, title!.span, named.subject) : ctx!.spans[0] ?? null;
+        // v3: an explicit period-of-record column ('Years' with two years) bounds the record when the title gives none.
+        const years = options?.version === 3 ? headers.findIndex((h, i) => i > annual && /^(?:years?|period|record period)$/i.test(cleanText(h.text.split(' / ').at(-1) ?? ''))) : -1;
         for (const [i, row] of body.entries()) {
             const label = row[0].cell, role = classifyHeader(label.text);
-            if (!label.header || role.role !== 'TEMPERATURE' || !row[annual].origin)
+            if (!rowLabel(row) || !row[annual].origin)
                 continue;
+            const span = years > 0 ? row.slice(years).map(s => s.cell.text).join(' ').match(/\b(1[6-9]\d\d|20\d\d)\D+(1[6-9]\d\d|20\d\d)\b/) : null, period = named?.period ?? (span ? span[1] + '–' + span[2] : null);
             const v = parseTemperatureValue(row[annual].cell.text, role.unit ?? captionUnit, policy, language);
             if ('quantity' in v && role.qualifiers.length)
-                make(fact(named.subject, { quantity: v.quantity, qualifiers: [...role.qualifiers, ...(v.quantity.approximation === 'APPROXIMATE' ? ['APPROXIMATE'] : [])], observationPeriod: named.period }), row[annual].cell, first + headerRows + i, annual, label, headers[annual], subject, v.unitSource === 'CELL' ? 'CELL' : role.unit ? 'HEADER' : 'CAPTION', method, [], [...grid.anchors, ...attribution]);
+                make(fact(subjectName, { quantity: v.quantity, qualifiers: [...role.qualifiers, ...(v.quantity.approximation === 'APPROXIMATE' ? ['APPROXIMATE'] : [])], observationPeriod: period, ...(ctx?.kind === 'STATION' ? { subjectKind: 'STATION' as const } : {}) }), row[annual].cell, first + headerRows + i, annual, label, headers[annual], subject, v.unitSource === 'CELL' ? 'CELL' : role.unit ? 'HEADER' : 'CAPTION', method, ctx ? ctx.spans.slice(1) : [], [...grid.anchors, ...attribution], ctx?.source);
         }
         return { summary: summary('PARSED', 'Transposed metric table; annual column only, monthly columns not extracted', body.length, width), facts };
     }

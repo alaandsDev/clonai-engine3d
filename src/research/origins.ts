@@ -3,6 +3,7 @@ import { normalize } from '../semantics/normalize';
 import { canonicalUrl } from './web/security';
 import { sourceSpan } from './source';
 import { attributes, hostOf, jsonLdSummary, parseHtmlStructures } from './structured';
+import { transliterationKey } from './entities';
 import type { AliasCandidate, Evidence, OriginGroup, OriginRelation, SourceDocument, SourceGraph, SourceQualityAssessment } from './contracts';
 // Phase 21 SourceGraph. Relations are detected from snapshots only; an undetectable relation is UNKNOWN_RELATION,
 // never proof of independence beyond what the snapshots show.
@@ -106,7 +107,7 @@ function levenshtein(a: string, b: string) { const d = Array.from({ length: b.le
     }
 } return d[b.length]; }
 /** Aliases need explicit source wording to be CONFIRMED. Structured metadata is LIKELY; similarity alone is AMBIGUOUS; contradictions disable merging. */
-export function resolveAliases(sources: SourceDocument[], subjects: string[]): { aliases: AliasCandidate[]; canonical: Map<string, string>; contradicted: [string, string][] } {
+export function resolveAliases(sources: SourceDocument[], subjects: string[], version: 2 | 3 = 2): { aliases: AliasCandidate[]; canonical: Map<string, string>; contradicted: [string, string][] } {
     const out: AliasCandidate[] = [], relevant = new Set(subjects.map(normalize));
     const add = (name: string, alias: string, status: AliasCandidate['status'], relation: AliasCandidate['relation'], source: SourceDocument | null, span: AliasCandidate['sourceSpan'], reason: string) => { if (normalize(name) === normalize(alias) || alias.length > 100)
         return; const raw = { name, alias, status, relation, sourceId: source?.id ?? null, sourceSpan: span, reason }; out.push({ id: 'AL_' + jsonHash(raw).slice(0, 16), ...raw }); };
@@ -127,10 +128,16 @@ export function resolveAliases(sources: SourceDocument[], subjects: string[]): {
             for (const [i, node] of jsonLdSummary(parsed.jsonLd).entries())
                 if (node.name && relevant.has(normalize(node.name)))
                     for (const alias of node.alternateNames)
-                        add(node.name, alias, 'LIKELY_ALIAS', 'STRUCTURED_METADATA', s, parsed.jsonLd[Math.min(i, parsed.jsonLd.length - 1)]?.span ?? null, 'JSON-LD alternateName is supporting metadata only; not merged automatically');
+                        add(node.name, alias, version === 3 && relevant.has(normalize(node.name)) ? 'SUPPORTED_ALIAS' : 'LIKELY_ALIAS', 'STRUCTURED_METADATA', s, parsed.jsonLd[Math.min(i, parsed.jsonLd.length - 1)]?.span ?? null, 'JSON-LD alternateName is supporting metadata only; not merged automatically');
         }
     }
     const names = [...new Set(subjects)].sort();
+    // v3: algorithmic transliteration similarity is a review candidate, never a confirmation.
+    if (version === 3)
+        for (let i = 0; i < names.length; i++)
+            for (let j = i + 1; j < names.length; j++)
+                if (normalize(names[i]) !== normalize(names[j]) && transliterationKey(names[i]) === transliterationKey(names[j]) && transliterationKey(names[i]).length >= 4)
+                    add(names[i], names[j], 'CANDIDATE_ALIAS', 'TRANSLITERATION_CANDIDATE', null, null, 'TRANSLITERATION_CANDIDATE: algorithmic spelling similarity only; not merged');
     for (let i = 0; i < names.length; i++)
         for (let j = i + 1; j < names.length; j++) {
             const a = normalize(names[i]), b = normalize(names[j]);

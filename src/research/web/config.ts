@@ -9,16 +9,18 @@ export function webConfig(input: Partial<WebResearchConfig> = {}): WebResearchCo
     if (!/^[a-z0-9.-]+$/i.test(d) || d.includes('..') || d.startsWith('.'))
         throw Error('WEB_CONFIG domain'); new URL(c.searchEndpoint); if (input.v2 !== undefined)
     c.v2 = webV2Config(input.v2, c.maxFetchedSources); return c; }
-const STRATEGIES = ['MEDIAWIKI_REFERENCE_SEARCH', 'REFERENCE_FOLLOWING', 'WIKIDATA_ENTITY_DISCOVERY', 'OPENALEX_ACADEMIC_SEARCH'];
+const STRATEGIES = ['MEDIAWIKI_REFERENCE_SEARCH', 'REFERENCE_FOLLOWING', 'WIKIDATA_ENTITY_DISCOVERY', 'OPENALEX_ACADEMIC_SEARCH', 'CROSSREF_WORKS_SEARCH', 'PUBLISHER_LINK_FOLLOWING'];
+const V3_KEYS = ['crossrefEndpoint', 'maxDatasetBytes', 'maxPublisherLinksPerSource'];
 /** Phase 21 discovery configuration. Stage budgets are fetch attempts and together may not exceed maxFetchedSources. */
 export function webV2Config(input: Partial<WebResearchV2Config>, maxFetchedSources: number): WebResearchV2Config { const defaults: WebResearchV2Config = { strategies: ['MEDIAWIKI_REFERENCE_SEARCH', 'REFERENCE_FOLLOWING'], budgets: { broadDiscovery: 4, originDiscovery: 6, verification: 6, corroboration: 4 }, maxReferencesPerSource: 6, candidatePoolTarget: 12, wikidataEndpoint: 'https://www.wikidata.org/w/api.php', openAlexEndpoint: 'https://api.openalex.org/works', followArchivedCopies: true }; if (!input || typeof input !== 'object' || Array.isArray(input))
     throw Error('WEB_CONFIG v2 object'); for (const k of Object.keys(input))
-    if (!Object.hasOwn(defaults, k))
+    if (!Object.hasOwn(defaults, k) && !V3_KEYS.includes(k))
         throw Error('WEB_CONFIG v2 unknown ' + k); const c = { ...defaults, ...input, budgets: { ...defaults.budgets, ...input.budgets } }; if (!Array.isArray(c.strategies) || !c.strategies.length || c.strategies.some(s => !STRATEGIES.includes(s)) || new Set(c.strategies).size !== c.strategies.length)
     throw Error('WEB_CONFIG v2 strategies'); for (const k of Object.keys(c.budgets))
-    if (!['broadDiscovery', 'originDiscovery', 'verification', 'corroboration'].includes(k) || !Number.isInteger(c.budgets[k as 'broadDiscovery']) || c.budgets[k as 'broadDiscovery'] < 0 || c.budgets[k as 'broadDiscovery'] > 32)
+    if (!['broadDiscovery', 'originDiscovery', 'verification', 'corroboration', 'entityExpansion'].includes(k) || !Number.isInteger(c.budgets[k as 'broadDiscovery']) || c.budgets[k as 'broadDiscovery'] < 0 || c.budgets[k as 'broadDiscovery'] > 32)
         throw Error('WEB_CONFIG v2 budget ' + k); if (Object.values(c.budgets).reduce((n, v) => n + v, 0) > maxFetchedSources)
     throw Error('WEB_CONFIG v2 stage budgets exceed maxFetchedSources'); if (!Number.isInteger(c.maxReferencesPerSource) || c.maxReferencesPerSource < 1 || c.maxReferencesPerSource > 32 || !Number.isInteger(c.candidatePoolTarget) || c.candidatePoolTarget < 1 || c.candidatePoolTarget > 40 || typeof c.followArchivedCopies !== 'boolean')
-    throw Error('WEB_CONFIG v2 bounds'); for (const e of [c.wikidataEndpoint, c.openAlexEndpoint])
+    throw Error('WEB_CONFIG v2 bounds'); if (c.maxDatasetBytes !== undefined && (!Number.isInteger(c.maxDatasetBytes) || c.maxDatasetBytes < 1 || c.maxDatasetBytes > 16777216) || c.maxPublisherLinksPerSource !== undefined && (!Number.isInteger(c.maxPublisherLinksPerSource) || c.maxPublisherLinksPerSource < 0 || c.maxPublisherLinksPerSource > 8))
+    throw Error('WEB_CONFIG v3 bounds'); for (const e of [c.wikidataEndpoint, c.openAlexEndpoint, ...(c.crossrefEndpoint ? [c.crossrefEndpoint] : [])])
     if (new URL(e).protocol !== 'https:')
         throw Error('WEB_CONFIG v2 endpoint'); return c; }

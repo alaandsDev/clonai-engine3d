@@ -24,7 +24,7 @@ export function validateResearchRequest(r: ResearchRequest) {
         if (c.residencyCriterion !== undefined && !['PERMANENT_SETTLEMENT', 'PERMANENT_POPULATION', 'TEMPORARY_RESEARCH_STAFF', 'SEASONAL_PRESENCE'].includes(c.residencyCriterion))
             throw Error('RESEARCH_REQUEST residency');
         // POPULATION counts exist only in the v2 extraction model.
-        if (c.metric !== undefined && c.metric !== 'TEMPERATURE' && !(c.metric === 'POPULATION' && r.sourcePolicy?.researchVersion === 2))
+        if (c.metric !== undefined && c.metric !== 'TEMPERATURE' && !(c.metric === 'POPULATION' && (r.sourcePolicy?.researchVersion ?? 1) >= 2))
             throw Error('RESEARCH_REQUEST metric');
         for (const k of ['qualifier', 'temporalContext'] as const)
             if (c[k] !== undefined && (typeof c[k] !== 'string' || !c[k]!.trim()))
@@ -33,12 +33,14 @@ export function validateResearchRequest(r: ResearchRequest) {
     const p = r.sourcePolicy;
     if (p) {
         for (const k of Object.keys(p))
-            if (!['minIndependentSources', 'minPrimaryQuality', 'allowFahrenheitConversion', 'allowEnglishExtraction', 'temporalComparison', 'maxSourceBytes', 'maxTotalSourceBytes', 'maxNormalizedCharacters', 'evaluationDate', 'researchVersion', 'factTypeQuorum', 'residencyMaxAgeYears'].includes(k))
+            if (!['minIndependentSources', 'minPrimaryQuality', 'allowFahrenheitConversion', 'allowEnglishExtraction', 'temporalComparison', 'maxSourceBytes', 'maxTotalSourceBytes', 'maxNormalizedCharacters', 'evaluationDate', 'researchVersion', 'factTypeQuorum', 'residencyMaxAgeYears', 'observationSitePolicy'].includes(k))
                 throw Error('RESEARCH_POLICY unknown ' + k);
-        if (p.researchVersion !== undefined && p.researchVersion !== 1 && p.researchVersion !== 2)
+        if (p.researchVersion !== undefined && p.researchVersion !== 1 && p.researchVersion !== 2 && p.researchVersion !== 3)
             throw Error('RESEARCH_POLICY version');
-        if ((p.factTypeQuorum !== undefined || p.residencyMaxAgeYears !== undefined) && p.researchVersion !== 2)
+        if ((p.factTypeQuorum !== undefined || p.residencyMaxAgeYears !== undefined) && (p.researchVersion ?? 1) < 2)
             throw Error('RESEARCH_POLICY v2 fields require researchVersion 2');
+        if (p.observationSitePolicy !== undefined && (p.researchVersion !== 3 || !['SAME_ENTITY_ONLY', 'SOURCED_OBSERVATION_SITE'].includes(p.observationSitePolicy)))
+            throw Error('RESEARCH_POLICY observationSitePolicy requires researchVersion 3');
         if (p.residencyMaxAgeYears !== undefined && (!Number.isInteger(p.residencyMaxAgeYears) || p.residencyMaxAgeYears < 1 || p.residencyMaxAgeYears > 100))
             throw Error('RESEARCH_POLICY residency age');
         if (p.factTypeQuorum !== undefined) {
