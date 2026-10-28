@@ -1,0 +1,471 @@
+{
+  "version": 1,
+  "id": "car-freezing-demo",
+  "purpose": "Mostrar diretamente o gelo acumulando no carro, em vez de apenas um apresentador na neve",
+  "claim": {
+    "id": "claim-car-freezing",
+    "text": "O carro fica coberto de gelo no frio extremo.",
+    "type": "CAUSE_EFFECT",
+    "requiresVisualProof": true,
+    "cause": "frio extremo",
+    "transition": "acúmulo de gelo na superfície",
+    "effect": "carro congelado"
+  },
+  "subjects": [
+    {
+      "id": "car",
+      "kind": "PROP",
+      "resourceId": "PROP_CAR_001",
+      "size": [
+        3.2,
+        1.6,
+        1.4
+      ],
+      "color": "#e44837"
+    }
+  ],
+  "initialState": {
+    "subjects": {
+      "car": {
+        "position": [
+          0.6,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.9,
+          0.9,
+          0.9
+        ],
+        "visible": false,
+        "stateId": "NORMAL",
+        "parameters": {
+          "frost": 0,
+          "highlight": 0
+        }
+      }
+    },
+    "environment": {
+      "visibility": true,
+      "tint": "#ffffff",
+      "fogIntensity": 0,
+      "groundCutaway": 0,
+      "backgroundEmphasis": 0
+    },
+    "presenterMode": "HYBRID"
+  },
+  "finalState": {
+    "subjects": {
+      "car": {
+        "position": [
+          0.6,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.9,
+          0.9,
+          0.9
+        ],
+        "visible": true,
+        "stateId": "FROZEN",
+        "parameters": {
+          "frost": 1,
+          "highlight": 0
+        }
+      }
+    },
+    "environment": {
+      "visibility": true,
+      "tint": "#ffffff",
+      "fogIntensity": 0.25,
+      "groundCutaway": 0,
+      "backgroundEmphasis": 0
+    },
+    "presenterMode": "DEMONSTRATION"
+  },
+  "presenterModes": [
+    {
+      "startFrame": 0,
+      "endFrame": 60,
+      "mode": "HYBRID"
+    },
+    {
+      "startFrame": 60,
+      "endFrame": 300,
+      "mode": "DEMONSTRATION"
+    }
+  ],
+  "direction": {
+    "version": 1,
+    "id": "car-freezing",
+    "fps": 30,
+    "width": 480,
+    "height": 854,
+    "totalFrames": 300,
+    "baseShot": {
+      "id": "car-freezing-world",
+      "durationSeconds": 10,
+      "environment": {
+        "resourceId": "ENV_WINTER_001"
+      },
+      "characters": [
+        {
+          "instanceId": "actor",
+          "resourceId": "CHAR_CAIO_001",
+          "position": [
+            -1.6,
+            0,
+            0.5
+          ]
+        }
+      ],
+      "props": [
+        {
+          "instanceId": "car",
+          "resourceId": "PROP_CAR_001"
+        }
+      ],
+      "actions": [],
+      "vfx": [
+        {
+          "resourceId": "VFX_SNOW_001",
+          "start": 0,
+          "end": 1,
+          "parameters": {
+            "intensity": 0.2
+          }
+        }
+      ],
+      "camera": {
+        "resourceId": "CAM_STATIC_001"
+      }
+    },
+    "initialState": {
+      "actors": {
+        "actor": {
+          "position": [
+            -1.6,
+            0,
+            0.5
+          ],
+          "facing": 0
+        }
+      },
+      "props": {
+        "car": {
+          "position": [
+            0.6,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            0.9,
+            0.9,
+            0.9
+          ],
+          "visible": true,
+          "parameters": {
+            "frost": 0
+          }
+        }
+      },
+      "camera": {
+        "position": [
+          2,
+          3.4,
+          11.5
+        ],
+        "target": [
+          0,
+          1,
+          0
+        ]
+      }
+    },
+    "finalState": {
+      "actors": {
+        "actor": {
+          "position": [
+            -1.6,
+            0,
+            0.5
+          ],
+          "facing": 0
+        }
+      },
+      "props": {
+        "car": {
+          "position": [
+            0.6,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "scale": [
+            0.9,
+            0.9,
+            0.9
+          ],
+          "visible": true,
+          "parameters": {
+            "frost": 0
+          }
+        }
+      },
+      "camera": {
+        "position": [
+          2,
+          3.4,
+          11.5
+        ],
+        "target": [
+          0,
+          1,
+          0
+        ]
+      }
+    },
+    "blocking": [],
+    "actionSegments": [],
+    "cameraSegments": [
+      {
+        "startFrame": 0,
+        "endFrame": 45,
+        "easing": "EASE_IN_OUT",
+        "purpose": "Contexto: ator e carro normal",
+        "cameraId": "CAM_PAN_LEFT_001",
+        "behavior": "MOVE",
+        "startState": {
+          "position": [
+            2,
+            3.4,
+            11.5
+          ],
+          "target": [
+            0,
+            1,
+            0
+          ]
+        },
+        "endState": {
+          "position": [
+            2,
+            3.4,
+            11.5
+          ],
+          "target": [
+            0,
+            1,
+            0
+          ]
+        }
+      },
+      {
+        "startFrame": 60,
+        "endFrame": 135,
+        "easing": "EASE_IN_OUT",
+        "purpose": "Revelar acúmulo sem apresentador na frente",
+        "cameraId": "CAM_PUSH_IN_001",
+        "behavior": "REFRAME",
+        "startState": {
+          "position": [
+            2,
+            3.4,
+            11.5
+          ],
+          "target": [
+            0,
+            1,
+            0
+          ]
+        },
+        "endState": {
+          "position": [
+            2.6,
+            2.3,
+            7.5
+          ],
+          "target": [
+            0.6,
+            0.75,
+            0
+          ]
+        },
+        "focusTarget": {
+          "type": "PROP",
+          "id": "car",
+          "offset": [
+            0,
+            0.75,
+            0
+          ]
+        }
+      },
+      {
+        "startFrame": 150,
+        "endFrame": 240,
+        "easing": "EASE_IN_OUT",
+        "purpose": "Mostrar superfície congelada em outro ângulo",
+        "cameraId": "CAM_ORBIT_001",
+        "behavior": "MOVE",
+        "startState": {
+          "position": [
+            2.6,
+            2.3,
+            7.5
+          ],
+          "target": [
+            0.6,
+            0.75,
+            0
+          ]
+        },
+        "endState": {
+          "position": [
+            -2,
+            2.6,
+            7.6
+          ],
+          "target": [
+            0.6,
+            0.75,
+            0
+          ]
+        }
+      }
+    ],
+    "focusSegments": [
+      {
+        "startFrame": 0,
+        "endFrame": 300,
+        "easing": "LINEAR",
+        "purpose": "Fenômeno no carro é o foco",
+        "target": {
+          "type": "PROP",
+          "id": "car",
+          "offset": [
+            0,
+            0.75,
+            0
+          ]
+        }
+      }
+    ],
+    "propMotions": [],
+    "shots": [
+      {
+        "id": "car-freezing-continuous",
+        "startFrame": 0,
+        "endFrame": 300,
+        "transition": "CONTINUE",
+        "onScreenText": "Carros cobertos de gelo"
+      }
+    ],
+    "captions": []
+  },
+  "steps": [
+    {
+      "operation": "REVEAL",
+      "target": "car",
+      "startFrame": 0,
+      "endFrame": 1,
+      "parameters": {},
+      "purpose": "Apresentar o objeto normal",
+      "easing": "LINEAR"
+    },
+    {
+      "operation": "INCREASE",
+      "target": "ENVIRONMENT",
+      "startFrame": 0,
+      "endFrame": 45,
+      "parameters": {
+        "parameter": "fogIntensity",
+        "from": 0,
+        "to": 0.25
+      },
+      "purpose": "Contexto estilizado de frio; não simulação física",
+      "easing": "LINEAR"
+    },
+    {
+      "operation": "ACCUMULATE",
+      "target": "car",
+      "startFrame": 45,
+      "endFrame": 120,
+      "parameters": {
+        "parameter": "frost",
+        "from": 0,
+        "to": 0.45
+      },
+      "purpose": "Primeiras placas de gelo",
+      "easing": "LINEAR"
+    },
+    {
+      "operation": "CHANGE_STATE",
+      "target": "car",
+      "startFrame": 120,
+      "endFrame": 121,
+      "parameters": {
+        "from": "NORMAL",
+        "to": "FROSTED"
+      },
+      "purpose": "Conservar o estado parcialmente gelado",
+      "easing": "LINEAR"
+    },
+    {
+      "operation": "ACCUMULATE",
+      "target": "car",
+      "startFrame": 121,
+      "endFrame": 210,
+      "parameters": {
+        "parameter": "frost",
+        "from": 0.45,
+        "to": 1
+      },
+      "purpose": "Ampliar a cobertura do gelo",
+      "easing": "LINEAR"
+    },
+    {
+      "operation": "CHANGE_STATE",
+      "target": "car",
+      "startFrame": 210,
+      "endFrame": 211,
+      "parameters": {
+        "from": "FROSTED",
+        "to": "FROZEN"
+      },
+      "purpose": "Conservar o resultado congelado",
+      "easing": "LINEAR"
+    },
+    {
+      "operation": "HIGHLIGHT",
+      "target": "car",
+      "startFrame": 211,
+      "endFrame": 245,
+      "parameters": {
+        "amount": 0.15
+      },
+      "purpose": "Ênfase pequena no resultado, seguida de hold",
+      "easing": "LINEAR"
+    }
+  ]
+}

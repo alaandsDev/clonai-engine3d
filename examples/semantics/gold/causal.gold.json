@@ -1,0 +1,13 @@
+{
+  "relationTypes": [
+    "CAUSE_EFFECT"
+  ],
+  "causalConfidence": [
+    "HIGH",
+    "MEDIUM"
+  ],
+  "causePredicates": [
+    "DECREASE",
+    "FREEZE"
+  ]
+}

@@ -44,7 +44,11 @@ test("two-frame narration never creates zero-frame shot for unequal segments", (
     cacheKey: "test",
     timingSource: "estimated_proportional",
   };
-  const s = compileDirectorPlan({ ...plan, timingMode: "narration" }, [track]);
+  const short = structuredClone(plan);
+  short.scenes[0].narration = "A palavraextremamentelonga";
+  short.scenes[0].shots[0].narrationSegment = "A";
+  short.scenes[0].shots[1].narrationSegment = "palavraextremamentelonga";
+  const s = compileDirectorPlan({ ...short, timingMode: "narration" }, [track]);
   assert.deepEqual(
     s.shots.map((s) => s.durationFrames),
     [1, 1],

@@ -1,0 +1,42 @@
+{
+  "request": {
+    "version": 1,
+    "id": "real-temperature-records",
+    "topic": "Temperaturas mínimas registradas em locais terrestres.",
+    "language": "pt-BR",
+    "researchGoal": "FACTS",
+    "desiredFactTypes": [
+      "MEASUREMENT"
+    ],
+    "constraints": {
+      "metric": "TEMPERATURE",
+      "qualifier": "MINIMUM_RECORDED"
+    },
+    "sourcePolicy": {
+      "minIndependentSources": 1,
+      "minPrimaryQuality": "MEDIUM",
+      "allowEnglishExtraction": true,
+      "maxSourceBytes": 2097152,
+      "maxTotalSourceBytes": 16777216,
+      "maxNormalizedCharacters": 524288
+    },
+    "maxSources": 8,
+    "maxEvidenceItems": 128
+  },
+  "web": {
+    "enabled": true,
+    "maxResearchRounds": 2,
+    "maxQueries": 8,
+    "maxResultsPerQuery": 3,
+    "maxSearchResults": 24,
+    "maxCandidateSources": 16,
+    "maxFetchedSources": 8,
+    "maxSourcesPerDomain": 6,
+    "maxBytesPerSource": 2097152,
+    "maxTotalBytes": 16777216,
+    "maxDurationMs": 180000,
+    "respectRobots": true,
+    "officialDomainHints": [],
+    "allowSessionScopeAdjustment": true
+  }
+}

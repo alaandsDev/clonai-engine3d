@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "id": "topic-cold-car",
+  "topic": "Mostre um carro acumulando gelo no frio.",
+  "language": "pt-BR",
+  "targetDurationSeconds": {
+    "min": 40,
+    "max": 60
+  },
+  "targetWords": {
+    "min": 110,
+    "max": 160
+  },
+  "format": "vertical_short",
+  "factPolicy": "STRUCTURAL_ONLY"
+}

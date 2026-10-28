@@ -1,5 +1,6 @@
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
+import { resolveSafeOutputPath } from "../src/engine3d/paths";
 import { bundle } from "@remotion/bundler";
 import {
   renderMedia,
@@ -48,7 +49,26 @@ try {
     console.log(JSON.stringify(resolveShot(await input()), null, 2));
   } else if (["director", "render-director", "previews"].includes(command)) {
     const plan = (await input()) as DirectorPlan;
-    compileDirectorPlan({ ...plan, timingMode: "fixed" });
+    const preflight = compileDirectorPlan(
+      { ...plan, timingMode: "fixed" },
+      [],
+      { validateOnly: true },
+    );
+    if (command === "previews")
+      for (const shot of preflight.shots)
+        resolveSafeOutputPath(
+          path.join(out, "previews"),
+          shot.id,
+          "-start.png",
+        );
+    if (command === "render-director")
+      resolveSafeOutputPath(
+        out,
+        plan.id,
+        args.includes("--narrated") || plan.timingMode === "narration"
+          ? "-narrated.mp4"
+          : ".mp4",
+      );
     const tracks = [];
     if (args.includes("--narrated") || plan.timingMode === "narration") {
       for (const scene of plan.scenes)
@@ -118,15 +138,20 @@ try {
               composition,
               inputProps,
               frame: shot.startFrame + offset,
-              output: path.join(directory, `${shot.id}-${label}.png`),
+              output: resolveSafeOutputPath(
+                directory,
+                shot.id,
+                `-${label}.png`,
+              ),
               chromiumOptions,
             });
             console.log(`${shot.id}-${label}.png`);
           }
       } else {
-        const outputLocation = path.join(
+        const outputLocation = resolveSafeOutputPath(
           out,
-          `${plan.id}${tracks.length ? "-narrated" : ""}.mp4`,
+          plan.id,
+          tracks.length ? "-narrated.mp4" : ".mp4",
         );
         await renderMedia({
           serveUrl,

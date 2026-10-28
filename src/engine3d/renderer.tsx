@@ -1,4 +1,6 @@
-import React from "react";
+import React, { useMemo } from "react";
+import { resolveShot } from "./validation";
+import { validateSequence } from "./sequence-validation";
 import {
   AbsoluteFill,
   Audio,
@@ -11,10 +13,14 @@ import { ThreeCanvas } from "@remotion/three";
 import { useThree } from "@react-three/fiber";
 import type { ProceduralSequence, ShotSpec } from "./contracts";
 import { cameraAt } from "./motion";
+import type { Pose } from "./motion";
+import type { CameraState } from "./directed";
+import type {EnvironmentState} from './demonstration-contracts';
 import { Character, Environment, Prop, Vfx } from "./library";
-function Camera({ shot, t }: { shot: ShotSpec; t: number }) {
+import { COMPOSITION_Z } from "../composition-layers";
+function Camera({ shot, t, state }: { shot: ShotSpec; t: number; state?: CameraState }) {
   const { camera } = useThree();
-  const c = cameraAt(
+  const c = state ?? cameraAt(
     shot.camera.resourceId,
     t,
     shot.camera.parameters?.strength ?? 1,
@@ -24,7 +30,12 @@ function Camera({ shot, t }: { shot: ShotSpec; t: number }) {
   camera.updateMatrixWorld();
   return null;
 }
-export function ProceduralShot({ shot }: { shot: ShotSpec }) {
+export function ProceduralShot({ shot: input, directed,worldExtras,environmentState }: { shot: ShotSpec; directed?: {camera:CameraState;poses:Record<string,Pose>;visibleProps:Record<string,boolean>;presenterVisible?:boolean;propHighlights?:Record<string,number>};worldExtras?:React.ReactNode;environmentState?:EnvironmentState }) {
+  const shot = useMemo(() => {
+    const { sceneId, startFrame, endFrame, durationFrames, ...spec } =
+      input as ShotSpec & Record<string, unknown>;
+    return resolveShot(spec);
+  }, [input]);
   const frame = useCurrentFrame(),
     { fps, width, height } = useVideoConfig();
   const t = Math.min(
@@ -39,13 +50,14 @@ export function ProceduralShot({ shot }: { shot: ShotSpec }) {
         camera={{ fov: 44, position: [0, 2.1, 7.4] }}
         gl={{ antialias: true, preserveDrawingBuffer: true }}
       >
-        <Camera shot={shot} t={t} />
-        <Environment id={shot.environment.resourceId} />
-        {shot.characters.map((i) => (
-          <Character key={i.instanceId} instance={i} shot={shot} t={t} />
+        <Camera shot={shot} t={t} state={directed?.camera}/>
+        <Environment id={shot.environment.resourceId} state={environmentState}/>
+        {worldExtras}
+        {shot.characters.filter(()=>directed?.presenterVisible!==false).map((i) => (
+          <Character key={i.instanceId} instance={i} shot={shot} t={t} directedPose={directed?.poses[i.instanceId]}/>
         ))}
-        {shot.props.map((i) => (
-          <Prop key={i.instanceId} instance={i} shot={shot} t={t} />
+        {shot.props.filter(i=>directed?.visibleProps[i.instanceId]!==false).map((i) => (
+          <Prop key={i.instanceId} instance={i} shot={shot} t={t} highlight={directed?.propHighlights?.[i.instanceId]??0}/>
         ))}
         {shot.vfx.map((b, n) => (
           <Vfx key={n} binding={b} shot={shot} t={t} />
@@ -56,6 +68,7 @@ export function ProceduralShot({ shot }: { shot: ShotSpec }) {
           style={{
             position: "absolute",
             top: "9%",
+            zIndex: COMPOSITION_Z.TEXT,
             left: "8%",
             right: "8%",
             color: "white",
@@ -70,13 +83,14 @@ export function ProceduralShot({ shot }: { shot: ShotSpec }) {
         </div>
       )}
       {shot.props
-        .filter((p) => p.resourceId.includes("THERMOMETER"))
+        .filter((p) => p.resourceId === "PROP_THERMOMETER_001" && directed?.visibleProps[p.instanceId]!==false)
         .map((p) => (
           <div
             key={p.instanceId}
             style={{
               position: "absolute",
               top: "18%",
+              zIndex: COMPOSITION_Z.TEXT,
               right: "8%",
               color: "white",
               background: "#13283c",
@@ -93,17 +107,22 @@ export function ProceduralShot({ shot }: { shot: ShotSpec }) {
   );
 }
 export function SequenceRenderer({
-  sequence,
+  sequence: input,
+  editorialLayers,
+  world,
 }: {
   sequence: ProceduralSequence;
+  editorialLayers?: React.ReactNode;
+  world?: React.ReactNode;
 }) {
+  const sequence = useMemo(() => validateSequence(input), [input]);
   const frame = useCurrentFrame();
   const cue = sequence.captions.find(
     (c) => frame >= c.startFrame && frame < c.endFrame,
   );
   return (
-    <AbsoluteFill style={{ background: "#bed7e4" }}>
-      {sequence.shots.map((s) => (
+    <AbsoluteFill style={{ background: "#bed7e4", isolation: "isolate" }}>
+      {world ?? sequence.shots.map((s) => (
         <Sequence
           key={s.id}
           from={s.startFrame}
@@ -123,11 +142,13 @@ export function SequenceRenderer({
             <Audio src={staticFile(s.audio!.relativeAudioPath)} />
           </Sequence>
         ))}
+      {editorialLayers}
       {cue && (
         <div
           style={{
             position: "absolute",
             bottom: "13%",
+            zIndex: COMPOSITION_Z.CAPTION,
             left: "7%",
             right: "7%",
             display: "flex",

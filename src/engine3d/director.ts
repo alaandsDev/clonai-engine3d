@@ -6,9 +6,11 @@ import {
   type CaptionCue,
 } from "./contracts";
 import { resolveShot, resource } from "./validation";
-import { planShape } from "./schema";
-export const spokenText = (text: string) =>
-  text
+import { planShape, trackShape } from "./schema";
+export const spokenText = (text: string) => {
+  if (typeof text !== "string")
+    return fail("INVALID_PARAMETER", "spokenText expects string");
+  return text
     .replace(
       /\[(intenso|misterioso|suave|tenso|surpreso|reflexivo|impactado|provocador|curioso)\]/gi,
       "",
@@ -16,15 +18,26 @@ export const spokenText = (text: string) =>
     .replace(/\(PAUSA\)/gi, "")
     .replace(/\s+/g, " ")
     .trim();
+};
 export function captions(
   text: string,
   startFrame: number,
   durationFrames: number,
 ): CaptionCue[] {
+  if (
+    typeof text !== "string" ||
+    !Number.isInteger(startFrame) ||
+    startFrame < 0 ||
+    !Number.isInteger(durationFrames) ||
+    durationFrames < 1
+  )
+    fail("INVALID_PARAMETER", "captions");
   const words = spokenText(text).split(/\s+/).filter(Boolean);
   const groups = Array.from({ length: Math.ceil(words.length / 3) }, (_, i) =>
     words.slice(i * 3, i * 3 + 3).join(" "),
   );
+  if (groups.length > durationFrames)
+    fail("CAPTION_DURATION_TOO_SHORT", "at least one frame required per cue");
   return groups
     .map((text, i) => ({
       text,
@@ -37,8 +50,13 @@ export function captions(
 export function compileDirectorPlan(
   p: DirectorPlan,
   audio: NarrationTrack[] = [],
+  options: { validateOnly?: boolean } = {},
 ): ProceduralSequence {
   planShape(p);
+  if (!Array.isArray(audio)) fail("INVALID_PARAMETER", "audio tracks");
+  for (const track of audio) trackShape(track);
+  if (new Set(audio.map((a) => a.sceneId)).size !== audio.length)
+    fail("INVALID_PARAMETER", "duplicate audio track");
   if (!/^[a-zA-Z0-9_-]+$/.test(p.id))
     fail("INVALID_PARAMETER", "plan.id must be filename-safe");
   const { fps, width, height } = p.format;
@@ -175,7 +193,8 @@ export function compileDirectorPlan(
       durationFrames,
       audio: track,
     });
-    seq.captions.push(...captions(scene.narration, start, durationFrames));
+    if (!options.validateOnly)
+      seq.captions.push(...captions(scene.narration, start, durationFrames));
   }
   seq.totalDuration = seq.totalFrames / fps;
   return seq;

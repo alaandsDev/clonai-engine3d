@@ -1,0 +1,19 @@
+{
+  "words": [
+    80,
+    130
+  ],
+  "claimTypes": [
+    "PROCESS",
+    "QUANTITY_CHANGE",
+    "TEMPERATURE",
+    "RANKING",
+    "QUESTION",
+    "CAUSE_EFFECT"
+  ],
+  "hasGaps": true,
+  "predicates": [
+    "OPERATE"
+  ],
+  "noHighAmbiguous": true
+}

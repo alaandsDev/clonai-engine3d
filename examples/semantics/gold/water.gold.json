@@ -1,0 +1,31 @@
+{
+  "entityTags": [
+    "liquid",
+    "container",
+    "path",
+    "level"
+  ],
+  "predicates": [
+    "FLOW",
+    "RISE",
+    "ENTER",
+    "INCREASE",
+    "STORE"
+  ],
+  "claimTypes": [
+    "PROCESS",
+    "SPATIAL_RELATION",
+    "QUANTITY_CHANGE",
+    "OBJECT_STATE"
+  ],
+  "references": {
+    "Ela": "liquid"
+  },
+  "executable": true,
+  "primaryPredicates": [
+    "FLOW",
+    "RISE",
+    "INCREASE",
+    "STORE"
+  ]
+}

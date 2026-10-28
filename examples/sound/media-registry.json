@@ -1,0 +1,223 @@
+{
+  "version": 1,
+  "assets": [
+    {
+      "id": "SFX_WHOOSH_001",
+      "version": 1,
+      "type": "AUDIO",
+      "subtype": "SFX",
+      "roleTags": [
+        "WHOOSH",
+        "TRANSITION"
+      ],
+      "relativePath": "SFX/SFX Whoosh Flange 02.wav",
+      "sourceCatalog": "pack-audit-v1",
+      "sourceAuditId": "AUDIT_20be34b1a1475050",
+      "contentHash": "42ef953040e17e80f925bf15a15d1e582868c23cb0063d4b5c7e8006f010021b",
+      "technicalMetadata": {
+        "codec": "pcm_s24le",
+        "sampleRate": 48000,
+        "channels": 2,
+        "duration": 2.02525,
+        "sizeBytes": 592980
+      },
+      "semanticMetadata": {
+        "description": "Phase 7 shortlist candidate; listening/context approval pending",
+        "evidence": "filename/folder metadata; technical full decode in Phase 9"
+      },
+      "lifecycleStatus": "TESTED",
+      "licenseStatus": "DECLARED",
+      "provenance": "User-provided external pack; Phase 7 audit and Phase 9 technical test"
+    },
+    {
+      "id": "SFX_WHOOSH_002",
+      "version": 1,
+      "type": "AUDIO",
+      "subtype": "SFX",
+      "roleTags": [
+        "WHOOSH",
+        "TRANSITION"
+      ],
+      "relativePath": "SFX/Whoosh Airy Swirl 01.wav",
+      "sourceCatalog": "pack-audit-v1",
+      "sourceAuditId": "AUDIT_fbd577d00a77d752",
+      "contentHash": "9109dc53945f27e72b60663fbd96cacf0ceca717d5b772e8ebc3eeb83ed8f8f2",
+      "technicalMetadata": {
+        "codec": "pcm_s24le",
+        "sampleRate": 48000,
+        "channels": 2,
+        "duration": 2.046313,
+        "sizeBytes": 599142
+      },
+      "semanticMetadata": {
+        "description": "Phase 7 shortlist candidate; listening/context approval pending",
+        "evidence": "filename/folder metadata; technical full decode in Phase 9"
+      },
+      "lifecycleStatus": "TESTED",
+      "licenseStatus": "DECLARED",
+      "provenance": "User-provided external pack; Phase 7 audit and Phase 9 technical test"
+    },
+    {
+      "id": "SFX_IMPACT_001",
+      "version": 1,
+      "type": "AUDIO",
+      "subtype": "SFX",
+      "roleTags": [
+        "IMPACT"
+      ],
+      "relativePath": "SFX/Hit Fast Air Burst 01.wav",
+      "sourceCatalog": "pack-audit-v1",
+      "sourceAuditId": "AUDIT_556d8a90d9d44d1a",
+      "contentHash": "9a59e9b3dfee99ca8fac94b626a5c3b6eb8fb809000437022674154ad4a6bb0f",
+      "technicalMetadata": {
+        "codec": "pcm_s24le",
+        "sampleRate": 48000,
+        "channels": 2,
+        "duration": 2.045208,
+        "sizeBytes": 598824
+      },
+      "semanticMetadata": {
+        "description": "Phase 7 shortlist candidate; listening/context approval pending",
+        "evidence": "filename/folder metadata; technical full decode in Phase 9"
+      },
+      "lifecycleStatus": "TESTED",
+      "licenseStatus": "DECLARED",
+      "provenance": "User-provided external pack; Phase 7 audit and Phase 9 technical test"
+    },
+    {
+      "id": "SFX_IMPACT_002",
+      "version": 1,
+      "type": "AUDIO",
+      "subtype": "SFX",
+      "roleTags": [
+        "IMPACT"
+      ],
+      "relativePath": "SFX/H2W Fire Blast Processed 01.wav",
+      "sourceCatalog": "pack-audit-v1",
+      "sourceAuditId": "AUDIT_6964365bc8965564",
+      "contentHash": "4586cab326758488c588aaa9fbe916719b635c2b1247f9fa49dc96f1e9d21fe9",
+      "technicalMetadata": {
+        "codec": "pcm_s24le",
+        "sampleRate": 48000,
+        "channels": 2,
+        "duration": 1.831833,
+        "sizeBytes": 527616
+      },
+      "semanticMetadata": {
+        "description": "Phase 7 shortlist candidate; listening/context approval pending",
+        "evidence": "filename/folder metadata; technical full decode in Phase 9"
+      },
+      "lifecycleStatus": "TESTED",
+      "licenseStatus": "DECLARED",
+      "provenance": "User-provided external pack; Phase 7 audit and Phase 9 technical test"
+    },
+    {
+      "id": "SFX_RISER_001",
+      "version": 1,
+      "type": "AUDIO",
+      "subtype": "SFX",
+      "roleTags": [
+        "RISER"
+      ],
+      "relativePath": "SFX/Riser Flashback 01.wav",
+      "sourceCatalog": "pack-audit-v1",
+      "sourceAuditId": "AUDIT_ca93af78aad8121d",
+      "contentHash": "3f4f6dd248dce8e70d03478e3c24327cca4cdfba3c7adb4b97915a267bb4384d",
+      "technicalMetadata": {
+        "codec": "pcm_s24le",
+        "sampleRate": 48000,
+        "channels": 2,
+        "duration": 2.144896,
+        "sizeBytes": 627990
+      },
+      "semanticMetadata": {
+        "description": "Phase 7 shortlist candidate; listening/context approval pending",
+        "evidence": "filename/folder metadata; technical full decode in Phase 9"
+      },
+      "lifecycleStatus": "TESTED",
+      "licenseStatus": "DECLARED",
+      "provenance": "User-provided external pack; Phase 7 audit and Phase 9 technical test"
+    },
+    {
+      "id": "SFX_RISER_002",
+      "version": 1,
+      "type": "AUDIO",
+      "subtype": "SFX",
+      "roleTags": [
+        "RISER"
+      ],
+      "relativePath": "SFX/Riser Short 01.wav",
+      "sourceCatalog": "pack-audit-v1",
+      "sourceAuditId": "AUDIT_ae9fa70f642be8f8",
+      "contentHash": "e4256ff772344a685edf8a291659eba1422fb91c5954841f492a8b19c2152682",
+      "technicalMetadata": {
+        "codec": "pcm_s24le",
+        "sampleRate": 48000,
+        "channels": 2,
+        "duration": 2.285271,
+        "sizeBytes": 669042
+      },
+      "semanticMetadata": {
+        "description": "Phase 7 shortlist candidate; listening/context approval pending",
+        "evidence": "filename/folder metadata; technical full decode in Phase 9"
+      },
+      "lifecycleStatus": "TESTED",
+      "licenseStatus": "DECLARED",
+      "provenance": "User-provided external pack; Phase 7 audit and Phase 9 technical test"
+    },
+    {
+      "id": "SFX_UI_001",
+      "version": 1,
+      "type": "AUDIO",
+      "subtype": "SFX",
+      "roleTags": [
+        "UI"
+      ],
+      "relativePath": "SFX/Keyboard Typing 2.mp3",
+      "sourceCatalog": "pack-audit-v1",
+      "sourceAuditId": "AUDIT_8268facf2c59ef23",
+      "contentHash": "330011f59a724497b0e0063e9ccd70c8ec5fe93b3e10f48e0f5a138dff8285ca",
+      "technicalMetadata": {
+        "codec": "mp3",
+        "sampleRate": 44100,
+        "channels": 2,
+        "duration": 5.79915,
+        "sizeBytes": 236131
+      },
+      "semanticMetadata": {
+        "description": "Phase 7 shortlist candidate; listening/context approval pending",
+        "evidence": "filename/folder metadata; technical full decode in Phase 9"
+      },
+      "lifecycleStatus": "TESTED",
+      "licenseStatus": "DECLARED",
+      "provenance": "User-provided external pack; Phase 7 audit and Phase 9 technical test"
+    },
+    {
+      "id": "SFX_UI_002",
+      "version": 1,
+      "type": "AUDIO",
+      "subtype": "SFX",
+      "roleTags": [
+        "UI"
+      ],
+      "relativePath": "SFX/MacKeyboardTypeStd PE262902.wav",
+      "sourceCatalog": "pack-audit-v1",
+      "sourceAuditId": "AUDIT_6c12e08b2046ea01",
+      "contentHash": "48b238ae5849385237c7b46068e242dad6fe5498e3f2669520f62eb776fba35c",
+      "technicalMetadata": {
+        "codec": "pcm_s16le",
+        "sampleRate": 44100,
+        "channels": 2,
+        "duration": 44.222404,
+        "sizeBytes": 8063014
+      },
+      "semanticMetadata": {
+        "description": "Phase 7 shortlist candidate; listening/context approval pending",
+        "evidence": "filename/folder metadata; technical full decode in Phase 9"
+      },
+      "lifecycleStatus": "TESTED",
+      "licenseStatus": "DECLARED",
+      "provenance": "User-provided external pack; Phase 7 audit and Phase 9 technical test"
+    }
+  ]
+}

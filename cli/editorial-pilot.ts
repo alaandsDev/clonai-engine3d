@@ -1,0 +1,34 @@
+import { readFile, writeFile, mkdir } from "node:fs/promises";
+import path from "node:path";
+import { compileEditorial, createRenderProjection, editorialPreview, previewMarkdown, jsonHash, qaEditorial } from "../src/editorial";
+import { compileDirectorPlan } from "../src/engine3d/director";
+import type { EditorialInputs } from "../src/editorial";
+const out = path.resolve("out/engine3d/phase9");
+await mkdir(out, { recursive: true });
+const json = async (n: string, v: unknown) => writeFile(path.join(out, n), JSON.stringify(v, null, 2));
+const x = JSON.parse(await readFile(process.argv[2] ?? "examples/editorial/cold-pilot.json", "utf8")) as EditorialInputs;
+const selected = JSON.parse(await readFile(path.join(out, "sfx-candidates.json"), "utf8"));
+x.catalog = selected.candidates.map((c: any) => ({ assetRef: c.assetRef, ...(c.technicalEvidence ? { technicalEvidence: c.technicalEvidence } : {}) }));
+x.approvals = JSON.parse(await readFile(path.join(out, "asset-approvals.json"), "utf8"));
+const impact = selected.candidates.find((c: any) => c.roles.includes("IMPACT"));
+const cue = x.eventMap.events.find(e => e.type === "SFX_CUE");
+if (cue?.type === "SFX_CUE" && impact)
+    cue.assetRef = impact.assetRef;
+const result = compileEditorial(x, "PLAN_ONLY"), second = compileEditorial(JSON.parse(JSON.stringify(x)), "PLAN_ONLY");
+const projection = createRenderProjection(result, { omitEventIds: result.unresolvedEventIds, reason: "Phase 9 visual-only proof: explicitly omit pending SFX and B-roll; no mixing/generation." });
+compileDirectorPlan(projection.directorPlan);
+await json("pilot-input.json", x);
+await json("editorial-plan.json", x.plan);
+await json("event-map.json", x.eventMap);
+await json("decision-log.json", x.decisions ?? []);
+await json("editorial-preview.json", editorialPreview(x));
+await writeFile(path.join(out, "editorial-preview.md"), previewMarkdown(x));
+await json("compiled-director-plan.json", projection.directorPlan);
+await json("render-projection.json", projection);
+await json("qa-results.json", qaEditorial(x));
+const hashes = [jsonHash(result.directorPlan), jsonHash(second.directorPlan)];
+await json("determinism.json", { hashes, equal: hashes[0] === hashes[1], canonicalKeyOrder: true });
+await json("fingerprint.json", { compilerVersion: result.compilerVersion, fingerprint: result.fingerprint, identicalRepeat: result.fingerprint === second.fingerprint, purpose: "Cache/review invalidation; no filesystem mtime or machine path" });
+if (hashes[0] !== hashes[1] || result.fingerprint !== second.fingerprint)
+    throw new Error("nondeterministic compilation");
+console.log(`Editorial pilot compiled; PLAN_ONLY explicitly omitted: ${result.unresolvedEventIds.join(", ")}`);

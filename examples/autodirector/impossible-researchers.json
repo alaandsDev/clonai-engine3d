@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "id": "impossible-researchers",
+  "language": "pt-BR",
+  "format": "vertical_short",
+  "fps": 30,
+  "canvas": {
+    "width": 480,
+    "height": 854
+  },
+  "script": "Uma multidão de pesquisadores opera equipamentos científicos complexos dentro de uma estação.",
+  "claims": [
+    {
+      "id": "N1",
+      "text": "Uma multidão de pesquisadores opera equipamentos científicos complexos dentro de uma estação.",
+      "type": "PROCESS",
+      "startOffset": 0,
+      "endOffset": 93,
+      "importance": "PRIMARY",
+      "requiresVisualProof": true
+    }
+  ],
+  "constraints": {
+    "mode": "PLAN_ONLY"
+  }
+}

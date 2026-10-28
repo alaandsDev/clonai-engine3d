@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "id": "demo-grounded-process",
+  "topic": "Explique o processo observado no ensaio do Dataset Demo.",
+  "language": "pt-BR",
+  "researchGoal": "PROCESS",
+  "desiredFactTypes": [
+    "PROCESS"
+  ],
+  "maxSources": 8,
+  "maxEvidenceItems": 40
+}

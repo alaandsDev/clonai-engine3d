@@ -1,0 +1,17 @@
+{
+  "entityTags": [
+    "vehicle",
+    "ice"
+  ],
+  "predicates": [
+    "ACCUMULATE",
+    "COVER"
+  ],
+  "references": {
+    "Ele": "vehicle",
+    "veículo": "vehicle"
+  },
+  "executable": true,
+  "stateProcess": "ACCUMULATE ICE",
+  "stateFinal": "COVERED"
+}

@@ -1,0 +1,17 @@
+{
+  "relationTypes": [
+    "SOURCE",
+    "PATH",
+    "DESTINATION"
+  ],
+  "predicates": [
+    "EXIT",
+    "FLOW",
+    "RISE"
+  ],
+  "oneSubjectFor": [
+    "EXIT",
+    "FLOW",
+    "RISE"
+  ]
+}

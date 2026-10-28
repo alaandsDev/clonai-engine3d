@@ -1,0 +1,15 @@
+{
+  "entityTypes": [
+    "GROUP",
+    "OBJECT",
+    "PLACE"
+  ],
+  "predicates": [
+    "OPERATE"
+  ],
+  "claimTypes": [
+    "PROCESS"
+  ],
+  "requiredGap": "MISSING_SUBJECT",
+  "noDirect": true
+}

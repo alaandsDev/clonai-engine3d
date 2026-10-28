@@ -1,0 +1,16 @@
+{
+  "quantities": [
+    [
+      -20,
+      "TEMPERATURE"
+    ],
+    [
+      -60,
+      "TEMPERATURE"
+    ]
+  ],
+  "claimTypes": [
+    "QUANTITY_CHANGE"
+  ],
+  "direction": "DECREASE"
+}

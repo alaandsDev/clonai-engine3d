@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "id": "topic-structural-process",
+  "topic": "Mostre um líquido saindo de um recipiente, percorrendo um caminho e enchendo outro recipiente.",
+  "language": "pt-BR",
+  "targetDurationSeconds": {
+    "min": 40,
+    "max": 60
+  },
+  "targetWords": {
+    "min": 110,
+    "max": 160
+  },
+  "format": "vertical_short",
+  "factPolicy": "STRUCTURAL_ONLY"
+}

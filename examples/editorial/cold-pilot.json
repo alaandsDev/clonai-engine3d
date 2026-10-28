@@ -1,0 +1,68 @@
+{
+  "plan": {
+    "version": 1,
+    "id": "cold-editorial-pilot",
+    "title": "Frio extremo — piloto editorial",
+    "language": "pt-BR",
+    "format": "vertical_short",
+    "canvas": { "width": 480, "height": 854, "fps": 30 },
+    "source": { "type": "SCRIPT", "text": "Você abre a porta de casa e o frio é tão brutal que até seus cílios começam a congelar. Em Snag, no Canadá. Ali já foram registrados sessenta e três graus negativos." },
+    "cast": { "guide": "CHAR_CAIO_001" },
+    "safeZone": { "x": 0.08, "y": 0.08, "width": 0.84, "height": 0.72 },
+    "beats": [
+      {
+        "id": "hook", "narration": "Você abre a porta de casa e o frio é tão brutal que até seus cílios começam a congelar.",
+        "intent": "HOOK", "informationType": "SCENARIO", "emphasis": "HIGH", "visualGoal": "Mostrar o contato da mão com a porta e o ambiente frio.", "durationSeconds": 6,
+        "staging": {
+          "environment": { "resourceId": "ENV_WINTER_001" },
+          "characters": [{ "instanceId": "actor", "castId": "guide", "position": [0.7, 0, 0.1] }],
+          "props": [{ "instanceId": "door", "resourceId": "PROP_DOOR_001", "position": [-0.4, 0, 0], "scale": [0.9, 0.9, 0.9] }],
+          "actions": [{ "resourceId": "ACTION_OPEN_DOOR_001", "actor": "actor", "target": "door", "start": 0, "end": 1 }],
+          "vfx": [{ "resourceId": "VFX_SNOW_001", "start": 0, "end": 1, "parameters": { "intensity": 0.3 } }, { "resourceId": "VFX_COLD_BREATH_001", "start": 0, "end": 1, "actor": "actor", "anchor": "face" }],
+          "camera": { "resourceId": "CAM_STATIC_001" }
+        }
+      },
+      {
+        "id": "place", "narration": "Em Snag, no Canadá.", "intent": "SETUP", "informationType": "PLACE", "emphasis": "MEDIUM", "visualGoal": "Situar o lugar por rótulo; ambiente estilizado, sem fingir imagem geográfica real.", "durationSeconds": 3,
+        "staging": {
+          "environment": { "resourceId": "ENV_WINTER_001" },
+          "characters": [{ "instanceId": "actor", "castId": "guide", "position": [-0.5, 0, 0] }],
+          "props": [{ "instanceId": "map", "resourceId": "PROP_MAP_001", "position": [0.6, 1.1, 0.2] }],
+          "actions": [{ "resourceId": "ACTION_POINT_001", "actor": "actor", "target": "map", "start": 0, "end": 1 }],
+          "vfx": [], "camera": { "resourceId": "CAM_STATIC_001" }
+        }
+      },
+      {
+        "id": "number", "narration": "Ali já foram registrados sessenta e três graus negativos.", "intent": "FACT", "informationType": "NUMBER", "emphasis": "HIGH", "visualGoal": "Relacionar o valor extremo ao termômetro e ao gesto do personagem.", "durationSeconds": 4,
+        "staging": {
+          "environment": { "resourceId": "ENV_WINTER_001" },
+          "characters": [{ "instanceId": "actor", "castId": "guide", "position": [-0.6, 0, 0] }],
+          "props": [{ "instanceId": "therm", "resourceId": "PROP_THERMOMETER_001", "position": [0.6, 0.8, 0.15], "initialState": { "value": -63 } }],
+          "actions": [{ "resourceId": "ACTION_POINT_001", "actor": "actor", "target": "therm", "start": 0, "end": 1 }, { "resourceId": "ACTION_LOOK_001", "actor": "actor", "target": "therm", "start": 0, "end": 1 }],
+          "vfx": [{ "resourceId": "VFX_SNOW_001", "start": 0, "end": 1, "parameters": { "intensity": 0.2 } }],
+          "camera": { "resourceId": "CAM_STATIC_001" }
+        }
+      }
+    ]
+  },
+  "eventMap": {
+    "version": 1, "planId": "cold-editorial-pilot",
+    "events": [
+      { "id": "hook_focus", "beatId": "hook", "type": "VISUAL_FOCUS", "anchor": { "type": "WORD", "value": "porta" }, "purpose": "Vincular a abertura ao objeto físico da cena.", "targetInstanceId": "door" },
+      { "id": "hook_camera", "beatId": "hook", "type": "CAMERA_EMPHASIS", "anchor": { "type": "BEAT_START" }, "purpose": "Aproximar o espectador do gesto inicial.", "movement": "PUSH", "strength": 0.2 },
+      { "id": "hook_sfx", "beatId": "hook", "type": "SFX_CUE", "anchor": { "type": "PHRASE", "value": "tão brutal" }, "purpose": "Pontuar a intensidade da descrição, sujeito à escuta futura.", "role": "IMPACT", "intensity": 0.6, "optional": true },
+      { "id": "hook_cold", "beatId": "hook", "type": "ATMOSPHERE", "anchor": { "type": "NORMALIZED", "value": 0.4 }, "purpose": "Documentar o frio como contexto, sem seleção automática de VFX.", "mood": "COLD" },
+      { "id": "hook_hold", "beatId": "hook", "type": "HOLD", "anchor": { "type": "NORMALIZED", "value": 0.75 }, "purpose": "Preservar tempo para ler o gesto antes de trocar de beat.", "durationSeconds": 1 },
+      { "id": "hook_cut", "beatId": "hook", "type": "CUT", "anchor": { "type": "BEAT_END" }, "purpose": "Separar o gancho da localização." },
+      { "id": "place_focus", "beatId": "place", "type": "VISUAL_FOCUS", "anchor": { "type": "BEAT_START" }, "purpose": "Relacionar a localização a um mapa estilizado.", "targetInstanceId": "map" },
+      { "id": "place_text", "beatId": "place", "type": "TEXT_EMPHASIS", "anchor": { "type": "BEAT_START" }, "purpose": "Nomear explicitamente o lugar.", "text": "Snag · Canadá", "importance": "MEDIUM" },
+      { "id": "place_broll", "beatId": "place", "type": "BROLL_REQUEST", "anchor": { "type": "WORD", "value": "Snag" }, "purpose": "Registrar uma possível futura vista licenciada do lugar, sem substituir a cena procedural.", "request": { "subject": "Paisagem de Snag, Canadá", "purpose": "Contextualização geográfica futura", "preferredType": "EITHER", "durationHint": 2, "visualConstraints": ["origem verificável", "sem simular fotografia documental gerada"], "generationAllowed": false, "externalProviderAllowed": false } },
+      { "id": "place_cut", "beatId": "place", "type": "CUT", "anchor": { "type": "BEAT_END" }, "purpose": "Introduzir o dado numérico após situar o lugar." },
+      { "id": "number_focus", "beatId": "number", "type": "VISUAL_FOCUS", "anchor": { "type": "PHRASE", "value": "sessenta e três" }, "purpose": "Vincular o número falado ao termômetro com valor explícito.", "targetInstanceId": "therm" },
+      { "id": "number_text", "beatId": "number", "type": "TEXT_EMPHASIS", "anchor": { "type": "BEAT_START" }, "purpose": "Apresentar o dado como título de todo o beat; não fingir aparição no instante exato da palavra.", "text": "Frio extremo", "importance": "HIGH" },
+      { "id": "number_camera", "beatId": "number", "type": "CAMERA_EMPHASIS", "anchor": { "type": "BEAT_START" }, "purpose": "Manter o número estável durante a explicação.", "movement": "STATIC", "strength": 0 }
+    ]
+  },
+  "catalog": [], "approvals": [],
+  "decisions": [{ "eventId": "place_broll", "decision": "Manter solicitação somente no plano", "status": "ACCEPTED", "reason": "Geração e providers fora do escopo da Fase 9", "attempt": 1 }]
+}

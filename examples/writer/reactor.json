@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "id": "topic-reactor",
+  "topic": "Explique em detalhes como funciona um reator nuclear.",
+  "language": "pt-BR",
+  "targetDurationSeconds": {
+    "min": 40,
+    "max": 60
+  },
+  "targetWords": {
+    "min": 110,
+    "max": 160
+  },
+  "format": "vertical_short",
+  "factPolicy": "STRUCTURAL_ONLY"
+}

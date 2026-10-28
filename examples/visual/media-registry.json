@@ -1,0 +1,205 @@
+{
+  "version": 1,
+  "assets": [
+    {
+      "id": "GRAPHIC_ARROW_001",
+      "version": 1,
+      "type": "GRAPHIC_ELEMENT",
+      "subtype": "ARROW",
+      "roleTags": [
+        "DIRECTION"
+      ],
+      "relativePath": "SETAS/Arrow_001.png",
+      "sourceCatalog": "pack-audit-v1",
+      "sourceAuditId": "AUDIT_c227742716e45bc8",
+      "contentHash": "f2d1c3f11055c1114153f441a9ac2dbae0f7963df433afaee0aec520443a6555",
+      "technicalMetadata": {
+        "kind": "IMAGE",
+        "format": "PNG",
+        "codec": "png",
+        "width": 2209,
+        "height": 1184,
+        "fps": 0,
+        "duration": 0,
+        "frameCount": 1,
+        "sizeBytes": 528988,
+        "alphaClass": "TRUE_ALPHA",
+        "alphaEvidence": {
+          "method": "native full-image RGBA pixel alpha extrema; decoded by Pillow and FFmpeg",
+          "min": 0,
+          "max": 249
+        },
+        "decodeVerified": true
+      },
+      "semanticMetadata": {
+        "description": "Black hand-drawn arrow pointing left; inspected on blue background",
+        "evidence": "Full-image pixel decode and visual inspection of Phase11 review preview",
+        "safeZoneSuitability": "REQUIRES_PLACEMENT_CHECK"
+      },
+      "compositionMode": "ALPHA",
+      "lifecycleStatus": "TESTED",
+      "licenseStatus": "DECLARED",
+      "provenance": "External user pack; read-only Phase7/Phase11 selected-media evidence"
+    },
+    {
+      "id": "GRAPHIC_LINE_001",
+      "version": 1,
+      "type": "GRAPHIC_ELEMENT",
+      "subtype": "LINE",
+      "roleTags": [
+        "EMPHASIS"
+      ],
+      "relativePath": "LINHAS/scribble-freeject.net_0000s_0000_Layer-42.png",
+      "sourceCatalog": "pack-audit-v1",
+      "sourceAuditId": "AUDIT_365c443b2f2dafa6",
+      "contentHash": "eb5979b520d3c6fbd1b1375394c16a5eadf37ee8d843a535cd45832fda3434f4",
+      "technicalMetadata": {
+        "kind": "IMAGE",
+        "format": "PNG",
+        "codec": "png",
+        "width": 733,
+        "height": 816,
+        "fps": 0,
+        "duration": 0,
+        "frameCount": 1,
+        "sizeBytes": 190121,
+        "alphaClass": "TRUE_ALPHA",
+        "alphaEvidence": {
+          "method": "native full-image RGBA pixel alpha extrema; decoded by Pillow and FFmpeg",
+          "min": 0,
+          "max": 255
+        },
+        "decodeVerified": true
+      },
+      "semanticMetadata": {
+        "description": "Black scribbled oval ring; useful as a highlight candidate, not a connecting line",
+        "evidence": "Visual inspection of Phase11 preview; no usage approval",
+        "safeZoneSuitability": "REQUIRES_PLACEMENT_CHECK"
+      },
+      "compositionMode": "ALPHA",
+      "lifecycleStatus": "TESTED",
+      "licenseStatus": "DECLARED",
+      "provenance": "External user pack; read-only Phase7/Phase11 selected-media evidence"
+    },
+    {
+      "id": "DUST_001",
+      "version": 1,
+      "type": "DUST",
+      "subtype": "VIDEO",
+      "roleTags": [
+        "ATMOSPHERE"
+      ],
+      "relativePath": "DUSTS OVERLAYS/7.mp4",
+      "sourceCatalog": "pack-audit-v1",
+      "sourceAuditId": "AUDIT_b769dae4e153ec60",
+      "contentHash": "ae2dad06d2d1be6e10c18c0f275bfc14fea938ce62d5e381580238b4f21a1688",
+      "technicalMetadata": {
+        "kind": "VIDEO",
+        "format": "MP4",
+        "codec": "h264",
+        "width": 1920,
+        "height": 1080,
+        "fps": 25.0,
+        "duration": 15.23229,
+        "frameCount": 377,
+        "sizeBytes": 432057,
+        "alphaClass": "BLACK_BACKGROUND",
+        "alphaEvidence": {
+          "method": "all source frames spatially reduced to 96x96 RGBA; 5 representative full-color thumbnails",
+          "min": 255,
+          "max": 255
+        },
+        "decodeVerified": true
+      },
+      "semanticMetadata": {
+        "description": "Candidate requires human review of visible shape/motion and context",
+        "evidence": "Phase7 classification + Phase11 selected-file decode/preview; not approved",
+        "safeZoneSuitability": "FULL_FRAME_BELOW_CAPTIONS"
+      },
+      "compositionMode": "SCREEN",
+      "lifecycleStatus": "TESTED",
+      "licenseStatus": "DECLARED",
+      "provenance": "External user pack; read-only Phase7/Phase11 selected-media evidence"
+    },
+    {
+      "id": "LIGHTLEAK_001",
+      "version": 1,
+      "type": "LIGHT_LEAK",
+      "subtype": "VIDEO",
+      "roleTags": [
+        "REVEAL"
+      ],
+      "relativePath": "LIGHT LEAKS/FilmStripBurns_1.mp4",
+      "sourceCatalog": "pack-audit-v1",
+      "sourceAuditId": "AUDIT_1dc4d5651777a55d",
+      "contentHash": "48fa52a5463f4535f0413e774a180ff8352a6e607b10b1edf1a8e67c4bb2de69",
+      "technicalMetadata": {
+        "kind": "VIDEO",
+        "format": "MP4",
+        "codec": "h264",
+        "width": 1920,
+        "height": 1080,
+        "fps": 25.0,
+        "duration": 1.207438,
+        "frameCount": 29,
+        "sizeBytes": 329009,
+        "alphaClass": "BLEND_REQUIRED",
+        "alphaEvidence": {
+          "method": "all source frames spatially reduced to 96x96 RGBA; 5 representative full-color thumbnails",
+          "min": 255,
+          "max": 255
+        },
+        "decodeVerified": true
+      },
+      "semanticMetadata": {
+        "description": "Candidate requires human review of visible shape/motion and context",
+        "evidence": "Phase7 classification + Phase11 selected-file decode/preview; not approved",
+        "safeZoneSuitability": "FULL_FRAME_BELOW_CAPTIONS"
+      },
+      "compositionMode": "SCREEN",
+      "lifecycleStatus": "TESTED",
+      "licenseStatus": "DECLARED",
+      "provenance": "External user pack; read-only Phase7/Phase11 selected-media evidence"
+    },
+    {
+      "id": "OVERLAY_001",
+      "version": 1,
+      "type": "OVERLAY",
+      "subtype": "IMAGE",
+      "roleTags": [
+        "ATMOSPHERE"
+      ],
+      "relativePath": "OVERLAYS/7d3c4b1f0949702e74a2c2d0a00026bd.jpg",
+      "sourceCatalog": "pack-audit-v1",
+      "sourceAuditId": "AUDIT_4b8a3556a0938012",
+      "contentHash": "3d98b85a8dd053d12d50b0074b21a24269768f212e48412dd966de52b9e70340",
+      "technicalMetadata": {
+        "kind": "IMAGE",
+        "format": "JPG",
+        "codec": "mjpeg",
+        "width": 736,
+        "height": 1309,
+        "fps": 0,
+        "duration": 0,
+        "frameCount": 1,
+        "sizeBytes": 47129,
+        "alphaClass": "BLEND_REQUIRED",
+        "alphaEvidence": {
+          "method": "native full-image RGBA pixel alpha extrema; decoded by Pillow and FFmpeg",
+          "min": 255,
+          "max": 255
+        },
+        "decodeVerified": true
+      },
+      "semanticMetadata": {
+        "description": "Candidate requires human review of visible shape/motion and context",
+        "evidence": "Phase7 classification + Phase11 selected-file decode/preview; not approved",
+        "safeZoneSuitability": "FULL_FRAME_BELOW_CAPTIONS"
+      },
+      "compositionMode": "SCREEN",
+      "lifecycleStatus": "TESTED",
+      "licenseStatus": "DECLARED",
+      "provenance": "External user pack; read-only Phase7/Phase11 selected-media evidence"
+    }
+  ]
+}

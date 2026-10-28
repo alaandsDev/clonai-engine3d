@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "id": "topic-source-only",
+  "topic": "Explique este processo.",
+  "language": "pt-BR",
+  "targetDurationSeconds": {
+    "min": 40,
+    "max": 60
+  },
+  "targetWords": {
+    "min": 110,
+    "max": 160
+  },
+  "format": "vertical_short",
+  "factPolicy": "SOURCE_ONLY",
+  "sourceMaterial": [
+    {
+      "id": "provided-process",
+      "text": "A água sai do recipiente inferior. Ela percorre o tubo. Depois entra no recipiente superior, onde o nível aumenta.",
+      "provenance": "Texto fornecido pelo usuário no requisito da Fase18; sem pesquisa",
+      "allowedForClaims": true
+    }
+  ]
+}

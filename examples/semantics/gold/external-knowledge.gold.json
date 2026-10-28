@@ -1,0 +1,14 @@
+{
+  "entityTypes": [
+    "PLACE"
+  ],
+  "forbiddenConcepts": [
+    "antártida",
+    "antarctica",
+    "-89",
+    "scientific_station",
+    "estação científica",
+    "recorde mundial"
+  ],
+  "quantityCount": 0
+}

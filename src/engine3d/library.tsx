@@ -1,4 +1,13 @@
 import React from "react";
+import {CarGeometry} from './car';
+import type {EnvironmentState} from './demonstration-contracts';
+import {Color} from 'three';
+import { fail } from "./contracts";
+import { requireExecutor } from "./executors";
+import { effectiveDoorOpenProgress } from "./door";
+import { vfxAttachmentMatrix } from "./attachments";
+import { parameters } from "./validation";
+import { instanceMatrix } from "./transforms";
 import { Euler, Quaternion, Vector3 } from "three";
 import type { Instance, ShotSpec, Vec3, Binding } from "./contracts";
 import {
@@ -9,6 +18,7 @@ import {
   rig,
   seeded,
   smooth,
+  type Pose,
 } from "./motion";
 const ink = "#171f33";
 export function Ball({
@@ -74,17 +84,20 @@ export function Character({
   instance: i,
   shot,
   t,
+  directedPose,
 }: {
   instance: Instance;
   shot: ShotSpec;
   t: number;
+  directedPose?: Pose;
 }) {
-  const pose = poseAt(i, shot, t);
-  const lia = i.resourceId.includes("LIA"),
-    zombie = i.resourceId.includes("ZOMBIE"),
-    robot = i.resourceId.includes("ROBOT"),
-    blob = i.resourceId.includes("BLOB"),
-    scout = i.resourceId.includes("SCOUT");
+  const characterKey = requireExecutor(i.resourceId, "character");
+  const pose = directedPose ?? poseAt(i, shot, t);
+  const lia = characterKey === "LIA",
+    zombie = characterKey === "ZOMBIE",
+    robot = characterKey === "ROBOT",
+    blob = characterKey === "BLOB",
+    scout = characterKey === "SCOUT";
   const coat = lia
     ? "#20c4bd"
     : zombie
@@ -115,6 +128,10 @@ export function Character({
               color="#ffe9ba"
             />
             {[-1, 1].map((side) => (
+              pose.feet ? <group key={side}>
+                <Limb from={[side * .19,.87,0]} to={side<0?pose.feet.left:pose.feet.right} color="#243f70" radius={.115}/>
+                <Box at={side<0?pose.feet.left:pose.feet.right} size={[.27,.19,.43]} color={ink}/>
+              </group> :
               <group
                 key={side}
                 position={[side * 0.19, 0.87, 0]}
@@ -259,18 +276,25 @@ export function Prop({
   instance: i,
   shot,
   t,
+  highlight=0,
 }: {
   instance: Instance;
   shot: ShotSpec;
   t: number;
+  highlight?:number;
 }) {
-  const id = i.resourceId;
-  let open = i.initialState?.openProgress ?? i.parameters?.openProgress ?? 0;
-  for (const b of shot.actions)
-    if (b.target === i.instanceId && b.resourceId.includes("OPEN_DOOR"))
-      open = Math.max(open, smooth(progress(b, t)));
+  const id = requireExecutor(i.resourceId, "prop");
+  instanceMatrix(i);
+  parameters(i.resourceId, i.parameters);
+  parameters(i.resourceId, i.initialState);
+  parameters(i.resourceId, i.finalState);
+  for (const [key, value] of Object.entries(i.initialState ?? {}))
+    if (i.parameters?.[key] !== undefined && i.parameters[key] !== value)
+      fail("INVALID_PARAMETER", "parameters and initialState disagree");
+  const open = effectiveDoorOpenProgress(i, shot, t);
   let content: React.ReactNode;
-  if (id.includes("DOOR"))
+  if (id === "CAR") content=<CarGeometry frost={i.parameters?.frost??0}/>;
+  else if (id === "DOOR")
     content = (
       <>
         <Box at={[-0.62, 1.2, 0]} size={[0.18, 2.5, 0.22]} color="#c5a56e" />
@@ -296,8 +320,8 @@ export function Prop({
         </group>
       </>
     );
-  else if (id.includes("THERMOMETER")) {
-    const val = i.parameters?.value ?? 0;
+  else if (id === "THERMOMETER") {
+    const val = i.parameters?.value ?? i.initialState?.value ?? 0;
     content = (
       <>
         <Box at={[0, 0.6, 0]} size={[0.3, 1.2, 0.1]} color="#ecf1ed" />
@@ -310,7 +334,7 @@ export function Prop({
         <Ball at={[0, 0.15, 0.08]} scale={[0.12, 0.12, 0.06]} color="#ff4b59" />
       </>
     );
-  } else if (id.includes("BOTTLE"))
+  } else if (id === "BOTTLE")
     content = (
       <>
         <mesh position={[0, 0.3, 0]}>
@@ -320,7 +344,7 @@ export function Prop({
         <Box at={[0, 0.6, 0]} size={[0.14, 0.12, 0.14]} color="#e2f6ed" />
       </>
     );
-  else if (id.includes("MAP"))
+  else if (id === "MAP")
     content = (
       <>
         <Box size={[0.7, 0.03, 0.5]} color="#f4d69e" />
@@ -334,39 +358,39 @@ export function Prop({
         ))}
       </>
     );
-  else if (id.includes("CROWBAR") || id.includes("HATCHET"))
+  else if (id === "CROWBAR" || id === "HATCHET")
     content = (
       <>
         <Box at={[0, 0.45, 0]} size={[0.07, 0.9, 0.07]} color="#8f9ead" />
         <Box
           at={[0.12, 0.85, 0]}
-          size={[id.includes("HATCHET") ? 0.4 : 0.24, 0.16, 0.1]}
+          size={[id === "HATCHET" ? 0.4 : 0.24, 0.16, 0.1]}
           color="#b3c8d1"
         />
       </>
     );
-  else if (id.includes("LANTERN") || id.includes("FLASHLIGHT"))
+  else if (id === "LANTERN" || id === "FLASHLIGHT")
     content = (
       <>
         <Box at={[0, 0.25, 0]} size={[0.23, 0.5, 0.23]} color="#e4b447" />
         <Ball at={[0, 0.52, 0]} scale={[0.17, 0.16, 0.17]} color="#fff0aa" />
       </>
     );
-  else if (id.includes("MICROPHONE"))
+  else if (id === "MICROPHONE")
     content = (
       <>
         <Box at={[0, 0.2, 0]} size={[0.08, 0.4, 0.08]} />
         <Ball at={[0, 0.46, 0]} scale={[0.16, 0.2, 0.16]} color="#a1bbc5" />
       </>
     );
-  else if (id.includes("BACKPACK"))
+  else if (id === "BACKPACK")
     content = (
       <>
         <Ball at={[0, 0.35, 0]} scale={[0.32, 0.4, 0.16]} color="#c88a35" />
         <Box at={[0, 0.27, 0.17]} size={[0.42, 0.3, 0.08]} color="#ad652e" />
       </>
     );
-  else if (id.includes("MEDKIT"))
+  else if (id === "MEDKIT")
     content = (
       <>
         <Box at={[0, 0.25, 0]} size={[0.6, 0.45, 0.22]} color="#edf6ef" />
@@ -374,21 +398,21 @@ export function Prop({
         <Box at={[0, 0.25, 0.13]} size={[0.09, 0.3, 0.025]} color="#f34553" />
       </>
     );
-  else if (id.includes("PHONE"))
+  else if (id === "PHONE")
     content = (
       <>
         <Box at={[0, 0.25, 0]} size={[0.23, 0.46, 0.045]} />
         <Box at={[0, 0.27, 0.027]} size={[0.19, 0.35, 0.01]} color="#66d4d7" />
       </>
     );
-  else if (id.includes("CAMERA"))
+  else if (id === "CAMERA")
     content = (
       <>
         <Box at={[0, 0.22, 0]} size={[0.5, 0.32, 0.2]} color="#42566d" />
         <Ball at={[0, 0.22, 0.15]} scale={[0.14, 0.14, 0.1]} color="#73c5d5" />
       </>
     );
-  else
+  else if (id === "RADIO")
     content = (
       <>
         <Box at={[0, 0.25, 0]} size={[0.45, 0.5, 0.22]} color="#536b54" />
@@ -401,8 +425,9 @@ export function Prop({
         />
       </>
     );
+  else return fail("EXECUTOR_NOT_FOUND", id);
   return (
-    <group position={i.position} rotation={i.rotation} scale={i.scale}>
+    <group position={i.position} rotation={i.rotation} scale={highlight?(i.scale??[1,1,1]).map(v=>v*(1+highlight*.1)) as Vec3:i.scale}>
       {content}
     </group>
   );
@@ -418,14 +443,15 @@ const envColors: Record<string, [string, string]> = {
   SHELTER: ["#816f66", "#a28b72"],
   DEAD_FOREST: ["#9ba4a0", "#777b70"],
 };
-export function Environment({ id }: { id: string }) {
-  const name = id.slice(4, -4);
-  const [bg, ground] = envColors[name];
-  const forest = name.includes("FOREST") || name === "WINTER";
+export function Environment({ id, state }: { id: string;state?:EnvironmentState }) {
+  const name = requireExecutor(id, "environment");
+  const [baseBg,baseGround]=envColors[name];
+  const bg=state?'#'+new Color(baseBg).multiply(new Color(state.tint)).lerp(new Color('#192330'),state.backgroundEmphasis*.35).getHexString():baseBg,ground=state?'#'+new Color(baseGround).multiply(new Color(state.tint)).getHexString():baseGround;
+  const forest = ["FOREST", "DEAD_FOREST", "WINTER"].includes(name);
   return (
     <>
       <color attach="background" args={[bg]} />
-      <fog attach="fog" args={[bg, 12, 28]} />
+      <fog attach="fog" args={[bg, 12-(state?.fogIntensity??0)*8, 28-(state?.fogIntensity??0)*18]} />
       <ambientLight intensity={1.3} />
       <directionalLight
         position={[-4, 8, 5]}
@@ -433,7 +459,8 @@ export function Environment({ id }: { id: string }) {
         color={name === "WINTER" ? "#d6f2ff" : "#fff1da"}
       />
       <directionalLight position={[4, 3, -2]} intensity={1.2} color="#9abddd" />
-      <Box at={[0, -0.15, 0]} size={[100, 0.25, 100]} color={ground} />
+      <group visible={state?.visibility??true}>
+      {(state?.groundCutaway??0)>0?<>{[-1,1].map(side=><Box key={side} at={[side*(25+(state!.groundCutaway*3)), -.15,0]} size={[50,.25,100]} color={ground}/>)}</>:<Box at={[0, -0.15, 0]} size={[100, 0.25, 100]} color={ground} />}
       {forest ? (
         Array.from({ length: 12 }, (_, n) => {
           const x = (n % 2 ? -1 : 1) * (2.8 + seeded(n + 4) * 4),
@@ -489,6 +516,7 @@ export function Environment({ id }: { id: string }) {
           />
         ))
       ) : null}
+      </group>
     </>
   );
 }
@@ -501,14 +529,11 @@ export function Vfx({
   shot: ShotSpec;
   t: number;
 }) {
+  const key = requireExecutor(b.resourceId, "vfx");
+  const attachment = vfxAttachmentMatrix(b, shot, t);
   if (t < b.start || t > b.end) return null;
   const p = progress(b, t);
-  const actor = shot.characters.find((c) => c.instanceId === b.actor);
-  const target = shot.props.find((c) => c.instanceId === b.target);
-  const at: Vec3 = actor
-    ? anchorAt(actor, shot, t, b.anchor ?? "face")
-    : (target?.position ?? [0, 0, 0]);
-  if (b.resourceId.includes("SNOW"))
+  if (key === "SNOW")
     return (
       <>
         {Array.from(
@@ -528,9 +553,9 @@ export function Vfx({
         )}
       </>
     );
-  if (b.resourceId.includes("COLD_BREATH"))
+  if (key === "COLD_BREATH")
     return (
-      <group position={at}>
+      <group matrix={attachment} matrixAutoUpdate={false}>
         {Array.from({ length: 5 }, (_, n) => {
           const age = (p * 3 + n / 5) % 1;
           return (
@@ -551,23 +576,25 @@ export function Vfx({
         })}
       </group>
     );
-  return (
-    <group position={at}>
-      {Array.from({ length: 10 }, (_, n) => (
-        <group
-          key={n}
-          position={[
-            (seeded(n) - 0.5) * 0.75,
-            (seeded(n + 30) - 0.5) * 0.35,
-            0.04,
-          ]}
-          rotation={[0, 0, n * 0.8]}
-          scale={Math.max(0.1, smooth(p))}
-        >
-          <Box size={[0.018, 0.14, 0.025]} color="#c7faff" />
-          <Box size={[0.12, 0.018, 0.025]} color="#c7faff" />
-        </group>
-      ))}
-    </group>
-  );
+  if (key === "FROST")
+    return (
+      <group matrix={attachment} matrixAutoUpdate={false}>
+        {Array.from({ length: 10 }, (_, n) => (
+          <group
+            key={n}
+            position={[
+              (seeded(n) - 0.5) * 0.75,
+              (seeded(n + 30) - 0.5) * 0.35,
+              0.04,
+            ]}
+            rotation={[0, 0, n * 0.8]}
+            scale={Math.max(0.1, smooth(p))}
+          >
+            <Box size={[0.018, 0.14, 0.025]} color="#c7faff" />
+            <Box size={[0.12, 0.018, 0.025]} color="#c7faff" />
+          </group>
+        ))}
+      </group>
+    );
+  return fail("EXECUTOR_NOT_FOUND", key);
 }

@@ -1,0 +1,737 @@
+{
+  "version": 1,
+  "id": "flow-fill-demo",
+  "purpose": "Demonstrar source → connection → flow → destination → fill, sem copiar o poço",
+  "claim": {
+    "id": "claim-flow-fill",
+    "text": "O líquido atravessa a conexão e enche o reservatório.",
+    "type": "PROCESS",
+    "requiresVisualProof": true
+  },
+  "subjects": [
+    {
+      "id": "source",
+      "kind": "CYLINDER",
+      "size": [
+        1.1,
+        1.2,
+        1.1
+      ],
+      "color": "#b1dce8"
+    },
+    {
+      "id": "destination",
+      "kind": "CYLINDER",
+      "size": [
+        1.1,
+        1.2,
+        1.1
+      ],
+      "color": "#c5e2ed"
+    },
+    {
+      "id": "connection",
+      "kind": "PATH",
+      "size": [
+        0.13,
+        0.13,
+        0.13
+      ],
+      "color": "#e6edf2",
+      "path": [
+        [
+          -0.75,
+          1.5,
+          0
+        ],
+        [
+          0.35,
+          1.5,
+          0
+        ],
+        [
+          0.35,
+          0.8,
+          0
+        ],
+        [
+          0.75,
+          0.8,
+          0
+        ]
+      ]
+    },
+    {
+      "id": "surface",
+      "kind": "LAYER",
+      "layer": "surface",
+      "size": [
+        4,
+        0.2,
+        1.6
+      ],
+      "color": "#8a9a80"
+    },
+    {
+      "id": "subsurface",
+      "kind": "LAYER",
+      "layer": "subsurface",
+      "size": [
+        4,
+        0.2,
+        1.6
+      ],
+      "color": "#bc906b"
+    },
+    {
+      "id": "deep",
+      "kind": "LAYER",
+      "layer": "deep",
+      "size": [
+        4,
+        0.2,
+        1.6
+      ],
+      "color": "#758594"
+    }
+  ],
+  "initialState": {
+    "subjects": {
+      "source": {
+        "position": [
+          -1.3,
+          1.8,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ],
+        "visible": true,
+        "stateId": "DEFAULT",
+        "parameters": {
+          "fillLevel": 0.85,
+          "highlight": 0
+        }
+      },
+      "destination": {
+        "position": [
+          1.3,
+          0.5,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ],
+        "visible": true,
+        "stateId": "DEFAULT",
+        "parameters": {
+          "fillLevel": 0,
+          "highlight": 0
+        }
+      },
+      "connection": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ],
+        "visible": true,
+        "stateId": "DEFAULT",
+        "parameters": {
+          "connection": 0,
+          "flowProgress": 0,
+          "direction": 1,
+          "speed": 1,
+          "amount": 0.8,
+          "highlight": 0
+        }
+      },
+      "surface": {
+        "position": [
+          0,
+          -0.35,
+          -1
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ],
+        "visible": false,
+        "stateId": "DEFAULT",
+        "parameters": {}
+      },
+      "subsurface": {
+        "position": [
+          0,
+          -0.7,
+          -1
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ],
+        "visible": false,
+        "stateId": "DEFAULT",
+        "parameters": {}
+      },
+      "deep": {
+        "position": [
+          0,
+          -1.05,
+          -1
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ],
+        "visible": false,
+        "stateId": "DEFAULT",
+        "parameters": {}
+      }
+    },
+    "environment": {
+      "visibility": true,
+      "tint": "#ffffff",
+      "fogIntensity": 0,
+      "groundCutaway": 0,
+      "backgroundEmphasis": 0
+    },
+    "presenterMode": "DEMONSTRATION"
+  },
+  "finalState": {
+    "subjects": {
+      "source": {
+        "position": [
+          -1.3,
+          1.8,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ],
+        "visible": true,
+        "stateId": "DEFAULT",
+        "parameters": {
+          "fillLevel": 0,
+          "highlight": 0
+        }
+      },
+      "destination": {
+        "position": [
+          1.3,
+          0.5,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ],
+        "visible": true,
+        "stateId": "DEFAULT",
+        "parameters": {
+          "fillLevel": 0.85,
+          "highlight": 0
+        }
+      },
+      "connection": {
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ],
+        "visible": true,
+        "stateId": "DEFAULT",
+        "parameters": {
+          "connection": 1,
+          "flowProgress": 1,
+          "direction": 1,
+          "speed": 1,
+          "amount": 0.8,
+          "highlight": 0
+        }
+      },
+      "surface": {
+        "position": [
+          0,
+          -0.35,
+          -1
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ],
+        "visible": true,
+        "stateId": "DEFAULT",
+        "parameters": {}
+      },
+      "subsurface": {
+        "position": [
+          0,
+          -0.7,
+          -1
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ],
+        "visible": true,
+        "stateId": "DEFAULT",
+        "parameters": {}
+      },
+      "deep": {
+        "position": [
+          0,
+          -1.05,
+          -1
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ],
+        "visible": true,
+        "stateId": "DEFAULT",
+        "parameters": {}
+      }
+    },
+    "environment": {
+      "visibility": false,
+      "tint": "#ffffff",
+      "fogIntensity": 0,
+      "groundCutaway": 0.85,
+      "backgroundEmphasis": 0
+    },
+    "presenterMode": "DEMONSTRATION"
+  },
+  "presenterModes": [
+    {
+      "startFrame": 0,
+      "endFrame": 330,
+      "mode": "DEMONSTRATION"
+    }
+  ],
+  "direction": {
+    "version": 1,
+    "id": "process",
+    "fps": 30,
+    "width": 480,
+    "height": 854,
+    "totalFrames": 330,
+    "baseShot": {
+      "id": "process-world",
+      "durationSeconds": 11,
+      "environment": {
+        "resourceId": "ENV_LAB_001"
+      },
+      "characters": [],
+      "props": [],
+      "actions": [],
+      "vfx": [],
+      "camera": {
+        "resourceId": "CAM_STATIC_001"
+      }
+    },
+    "initialState": {
+      "actors": {},
+      "props": {},
+      "camera": {
+        "position": [
+          3,
+          4,
+          12
+        ],
+        "target": [
+          0,
+          0.8,
+          0
+        ]
+      }
+    },
+    "finalState": {
+      "actors": {},
+      "props": {},
+      "camera": {
+        "position": [
+          3,
+          4,
+          12
+        ],
+        "target": [
+          0,
+          0.8,
+          0
+        ]
+      }
+    },
+    "blocking": [],
+    "actionSegments": [],
+    "cameraSegments": [
+      {
+        "startFrame": 0,
+        "endFrame": 60,
+        "easing": "EASE_IN_OUT",
+        "purpose": "Contexto e abertura de camadas",
+        "cameraId": "CAM_PUSH_IN_001",
+        "behavior": "MOVE",
+        "startState": {
+          "position": [
+            3,
+            4,
+            12
+          ],
+          "target": [
+            0,
+            0.8,
+            0
+          ]
+        },
+        "endState": {
+          "position": [
+            2,
+            3.5,
+            11
+          ],
+          "target": [
+            0,
+            1,
+            0
+          ]
+        }
+      },
+      {
+        "startFrame": 90,
+        "endFrame": 180,
+        "easing": "EASE_IN_OUT",
+        "purpose": "Acompanhar a frente do fluxo",
+        "cameraId": "CAM_PAN_LEFT_001",
+        "behavior": "MOVE",
+        "startState": {
+          "position": [
+            2,
+            3.5,
+            11
+          ],
+          "target": [
+            0,
+            1,
+            0
+          ]
+        },
+        "endState": {
+          "position": [
+            1.5,
+            3,
+            10
+          ],
+          "target": [
+            0,
+            1,
+            0
+          ]
+        }
+      },
+      {
+        "startFrame": 180,
+        "endFrame": 270,
+        "easing": "EASE_IN_OUT",
+        "purpose": "Recompor para o nível do reservatório",
+        "cameraId": "CAM_ORBIT_001",
+        "behavior": "REFRAME",
+        "startState": {
+          "position": [
+            1.5,
+            3,
+            10
+          ],
+          "target": [
+            0,
+            1,
+            0
+          ]
+        },
+        "endState": {
+          "position": [
+            -2,
+            2.8,
+            9
+          ],
+          "target": [
+            1.3,
+            0.6,
+            0
+          ]
+        },
+        "focusTarget": {
+          "type": "PROP",
+          "id": "destination",
+          "offset": [
+            0,
+            0.1,
+            0
+          ]
+        }
+      }
+    ],
+    "focusSegments": [
+      {
+        "startFrame": 0,
+        "endFrame": 180,
+        "easing": "LINEAR",
+        "purpose": "Ligação e fluxo são foco",
+        "target": {
+          "type": "POSITION",
+          "position": [
+            0,
+            1.2,
+            0
+          ]
+        }
+      },
+      {
+        "startFrame": 180,
+        "endFrame": 330,
+        "easing": "LINEAR",
+        "purpose": "Consequência: nível aumenta",
+        "target": {
+          "type": "PROP",
+          "id": "destination",
+          "offset": [
+            0,
+            0.1,
+            0
+          ]
+        }
+      }
+    ],
+    "propMotions": [],
+    "shots": [
+      {
+        "id": "process-continuous",
+        "startFrame": 0,
+        "endFrame": 330,
+        "transition": "CONTINUE",
+        "onScreenText": "Fluxo → reservatório"
+      }
+    ],
+    "captions": []
+  },
+  "steps": [
+    {
+      "operation": "INCREASE",
+      "target": "ENVIRONMENT",
+      "startFrame": 0,
+      "endFrame": 45,
+      "parameters": {
+        "parameter": "groundCutaway",
+        "from": 0,
+        "to": 0.85
+      },
+      "purpose": "Abrir contexto interior com modifier genérico",
+      "easing": "LINEAR"
+    },
+    {
+      "operation": "REVEAL",
+      "target": "surface",
+      "startFrame": 0,
+      "endFrame": 1,
+      "parameters": {},
+      "purpose": "Expor camada primitiva sem novo environment",
+      "easing": "LINEAR"
+    },
+    {
+      "operation": "REVEAL",
+      "target": "subsurface",
+      "startFrame": 0,
+      "endFrame": 1,
+      "parameters": {},
+      "purpose": "Expor camada primitiva sem novo environment",
+      "easing": "LINEAR"
+    },
+    {
+      "operation": "REVEAL",
+      "target": "deep",
+      "startFrame": 0,
+      "endFrame": 1,
+      "parameters": {},
+      "purpose": "Expor camada primitiva sem novo environment",
+      "easing": "LINEAR"
+    },
+    {
+      "operation": "HIDE",
+      "target": "ENVIRONMENT",
+      "startFrame": 45,
+      "endFrame": 60,
+      "parameters": {},
+      "purpose": "Retirar contexto após revelar camadas, deixando o processo sem bancada ao fundo",
+      "easing": "LINEAR"
+    },
+    {
+      "operation": "CONNECT",
+      "target": "connection",
+      "startFrame": 60,
+      "endFrame": 90,
+      "parameters": {
+        "from": 0,
+        "to": 1
+      },
+      "purpose": "Construir relação entre origem e destino",
+      "easing": "LINEAR"
+    },
+    {
+      "operation": "FLOW",
+      "target": "connection",
+      "startFrame": 90,
+      "endFrame": 180,
+      "parameters": {
+        "path": [
+          [
+            -0.75,
+            1.5,
+            0
+          ],
+          [
+            0.35,
+            1.5,
+            0
+          ],
+          [
+            0.35,
+            0.8,
+            0
+          ],
+          [
+            0.75,
+            0.8,
+            0
+          ]
+        ],
+        "from": 0,
+        "to": 1,
+        "direction": "FORWARD",
+        "speed": 1,
+        "amount": 0.8
+      },
+      "purpose": "Frente do líquido percorre a conexão",
+      "easing": "LINEAR"
+    },
+    {
+      "operation": "DECREASE",
+      "target": "source",
+      "startFrame": 180,
+      "endFrame": 270,
+      "parameters": {
+        "parameter": "fillLevel",
+        "from": 0.85,
+        "to": 0
+      },
+      "purpose": "Origem perde conteúdo enquanto transfere",
+      "easing": "LINEAR"
+    },
+    {
+      "operation": "INCREASE",
+      "target": "destination",
+      "startFrame": 180,
+      "endFrame": 270,
+      "parameters": {
+        "parameter": "fillLevel",
+        "from": 0,
+        "to": 0.85
+      },
+      "purpose": "Destino enche depois que a frente chega",
+      "easing": "LINEAR"
+    },
+    {
+      "operation": "HIGHLIGHT",
+      "target": "destination",
+      "startFrame": 270,
+      "endFrame": 300,
+      "parameters": {
+        "amount": 0.18
+      },
+      "purpose": "Destacar a consequência e manter resultado",
+      "easing": "LINEAR"
+    }
+  ]
+}

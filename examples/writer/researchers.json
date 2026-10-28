@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "id": "topic-researchers",
+  "topic": "Explique uma estação cheia de pesquisadores operando equipamentos científicos.",
+  "language": "pt-BR",
+  "targetDurationSeconds": {
+    "min": 40,
+    "max": 60
+  },
+  "targetWords": {
+    "min": 110,
+    "max": 160
+  },
+  "format": "vertical_short",
+  "factPolicy": "STRUCTURAL_ONLY"
+}

@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "id": "demo-ranking-five",
+  "topic": "Os cinco pontos mais frios do Dataset Demo com população permanente.",
+  "language": "pt-BR",
+  "researchGoal": "RANKING",
+  "desiredFactTypes": [
+    "MEASUREMENT",
+    "RESIDENCY"
+  ],
+  "constraints": {
+    "rankingCount": 5,
+    "residencyCriterion": "PERMANENT_POPULATION",
+    "metric": "TEMPERATURE",
+    "qualifier": "MINIMUM_RECORDED",
+    "temporalContext": "1980"
+  },
+  "sourcePolicy": {
+    "minIndependentSources": 2
+  },
+  "maxSources": 8,
+  "maxEvidenceItems": 80
+}

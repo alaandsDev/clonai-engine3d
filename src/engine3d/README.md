@@ -1,5 +1,25 @@
 # Contratos e extensão
 
+## Fase 14: demonstrações visuais
+
+O inventário atual contém 50 IDs: os 49 anteriores e `PROP_CAR_001`. Estados e operações não criam novos IDs. [DEMONSTRATION.md](DEMONSTRATION.md) documenta o compilador puro e a integração opcional com DirectedSequence; exemplos em `examples/demonstration/`. As seções históricas abaixo descrevem seus contratos à época e continuam válidas para o caminho legado.
+
+## Hardening 6B
+
+Os 49 IDs permanecem iguais. `executors.ts` associa exatamente cada ID a uma chave de execução por categoria; Registry verifica todos os recursos available ao construir o catálogo. Character/Environment/Prop/Vfx/cameraAt/poseAt checam identidade também nas chamadas diretas. IDs desconhecidos produzem EXECUTOR_NOT_FOUND; Idle e Static são casos explícitos, Radio/Frost têm branches próprios. Flashlight/Lantern continuam compartilhados intencionalmente.
+
+`schema.ts` verifica tipos de todos os campos conhecidos, shapes, enums e números finitos. `sequence-validation.ts` protege os inputProps de runtime/Studio, além da validação do DirectorPlan. onScreenText, narrationSegment e visualIntent são strings, nunca objetos. Directions precisam ser vetores não nulos. Point/Look aceitam exatamente um de target, targetPosition e direction; Walk/Run aceitam apenas targetPosition; ações sem alvo rejeitam bindings ignorados. Look suporta apenas yaw: o componente vertical local não gera pitch.
+
+VFX: Snow não tem actor/target/anchor. ColdBreath exige actor de personagem + anchor face. Frost aceita **actor de personagem + anchor**, ou **target de prop**, sem misturar os modos. Target de personagem e actor de prop são rejeitados. Não existe fallback de binding ausente para origem. Attachments usam a matriz do anchor ou do prop: offsets locais acompanham posição, orientação e escala.
+
+Estado inicial é normalizado em parameters na resolução. Parâmetro e initialState simultâneos precisam concordar. Thermometer usa esse valor canônico para a coluna e o número. finalState declarado precisa concordar com a execução atual do prop; divergência gera CONTINUITY_MISMATCH. Não há novos keyframes ou interpolação de temperatura.
+
+Anchors continuam **analíticos**, não extraídos de meshes/bones. A transformação é `T * R(XYZ) * S * LOCAL`, com inversa Matrix4.invert. Matriz do corpo inclui lean e a matriz da face inclui headYaw. Point transforma alvos mundiais para o espaço do corpo; Look compensa a orientação inicial do ator. Door geometry, handle e ação usam `effectiveDoorOpenProgress`; a mão usa a matriz inversa do corpo, inclusive com XYZ/escala combinados.
+
+Escritas derivadas de IDs usam paths.ts: política fechada de filename, containment lexical após path.resolve e containment canônico para links existentes. IDs lógicos de shots continuam podendo conter texto que não seja nome de arquivo, mas um comando que tente gerar preview com tal ID falha antes do bundle. A verificação não é um sandbox do sistema operacional contra um processo externo que altere links entre checagem e escrita.
+
+Guardrails: characters8, props32, actions32, VFX12 e snow total160 por shot. Não há mudança de malhas ou benchmark implícito. Captions com menos frames que cues falham, preservando o limite de três palavras em vez de eliminar conteúdo. A distribuição temporal continua estimada.
+
 ## REUSE BEFORE CREATE
 
 Gere catálogo (`npm run engine3d:catalog`), consulte ID, tags e capabilities e confira `metadata.compatibleCharacters`. Crie um novo recurso apenas quando nenhum recurso existente atender. Não escreva TSX específico para roteiro.

@@ -1,0 +1,8 @@
+{
+  "references": {
+    "Ele": "vehicle",
+    "veículo": "vehicle"
+  },
+  "ellipsis": true,
+  "executable": true
+}

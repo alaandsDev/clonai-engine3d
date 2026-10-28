@@ -1,0 +1,46 @@
+{
+  "request": {
+    "version": 1,
+    "id": "real-cold-places",
+    "topic": "Os cinco lugares mais frios onde pessoas vivem permanentemente.",
+    "language": "pt-BR",
+    "researchGoal": "RANKING",
+    "desiredFactTypes": [
+      "MEASUREMENT",
+      "RESIDENCY",
+      "RANKING"
+    ],
+    "constraints": {
+      "metric": "TEMPERATURE",
+      "qualifier": "MINIMUM_RECORDED",
+      "residencyCriterion": "PERMANENT_POPULATION",
+      "rankingCount": 5
+    },
+    "sourcePolicy": {
+      "minIndependentSources": 2,
+      "minPrimaryQuality": "MEDIUM",
+      "allowEnglishExtraction": true,
+      "maxSourceBytes": 2097152,
+      "maxTotalSourceBytes": 16777216,
+      "maxNormalizedCharacters": 524288
+    },
+    "maxSources": 8,
+    "maxEvidenceItems": 128
+  },
+  "web": {
+    "enabled": true,
+    "maxResearchRounds": 2,
+    "maxQueries": 8,
+    "maxResultsPerQuery": 3,
+    "maxSearchResults": 24,
+    "maxCandidateSources": 16,
+    "maxFetchedSources": 8,
+    "maxSourcesPerDomain": 6,
+    "maxBytesPerSource": 2097152,
+    "maxTotalBytes": 16777216,
+    "maxDurationMs": 180000,
+    "respectRobots": true,
+    "officialDomainHints": [],
+    "allowSessionScopeAdjustment": true
+  }
+}

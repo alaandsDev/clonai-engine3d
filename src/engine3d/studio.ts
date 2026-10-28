@@ -21,11 +21,10 @@ export function studioSequence(
               {
                 instanceId: "preview",
                 resourceId: r.id,
-                position: [0, r.id.includes("DOOR") ? 0 : 0.8, 0],
-                scale: r.id.includes("DOOR") ? [1, 1, 1] : [2, 2, 2],
-                parameters: r.id.includes("THERMOMETER")
-                  ? { value: -68 }
-                  : undefined,
+                position: [0, r.id === "PROP_DOOR_001" ? 0 : 0.8, 0],
+                scale: r.id === "PROP_DOOR_001" ? [1, 1, 1] : [2, 2, 2],
+                parameters:
+                  r.id === "PROP_THERMOMETER_001" ? { value: -68 } : undefined,
               },
             ]
           : [],

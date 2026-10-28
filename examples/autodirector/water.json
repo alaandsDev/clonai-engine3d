@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "id": "water",
+  "language": "pt-BR",
+  "format": "vertical_short",
+  "fps": 30,
+  "canvas": {
+    "width": 480,
+    "height": 854
+  },
+  "script": "A água não aparece magicamente na sua caixa d'água.\n\nEla chega por uma tubulação e precisa subir até o reservatório.\n\nQuando a água entra, o nível dentro da caixa começa a aumentar.\n\nConforme o reservatório enche, a água fica armazenada para ser usada depois.\n\nParece simples, mas tudo depende de fazer a água chegar ao lugar certo.",
+  "claims": [
+    {
+      "id": "C1",
+      "text": "chega por uma tubulação",
+      "type": "PROCESS",
+      "startOffset": 57,
+      "endOffset": 80,
+      "importance": "PRIMARY",
+      "requiresVisualProof": true
+    },
+    {
+      "id": "C2",
+      "text": "precisa subir até o reservatório",
+      "type": "SPATIAL_RELATION",
+      "startOffset": 83,
+      "endOffset": 115,
+      "importance": "PRIMARY",
+      "requiresVisualProof": true
+    },
+    {
+      "id": "C3",
+      "text": "o nível dentro da caixa começa a aumentar",
+      "type": "QUANTITY_CHANGE",
+      "startOffset": 139,
+      "endOffset": 180,
+      "importance": "PRIMARY",
+      "requiresVisualProof": true
+    },
+    {
+      "id": "C4",
+      "text": "a água fica armazenada para ser usada depois",
+      "type": "OBJECT_STATE",
+      "startOffset": 214,
+      "endOffset": 258,
+      "importance": "PRIMARY",
+      "requiresVisualProof": true
+    },
+    {
+      "id": "C5",
+      "text": "tudo depende de fazer a água chegar ao lugar certo",
+      "type": "CONCLUSION",
+      "startOffset": 281,
+      "endOffset": 331,
+      "importance": "SUPPORTING",
+      "requiresVisualProof": false
+    }
+  ],
+  "constraints": {
+    "mode": "PLAN_ONLY"
+  }
+}

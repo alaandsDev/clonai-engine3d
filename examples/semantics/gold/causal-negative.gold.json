@@ -1,0 +1,8 @@
+{
+  "forbiddenRelationTypes": [
+    "CAUSE_EFFECT"
+  ],
+  "forbiddenClaimTypes": [
+    "CAUSE_EFFECT"
+  ]
+}

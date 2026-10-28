@@ -4,6 +4,7 @@ import {
   type ResourceType,
   type Anchor,
 } from "./contracts";
+import { verifyExecutors } from "./executors";
 const human = ["CHAR_CAIO_001", "CHAR_LIA_001"];
 const definitions: Record<string, string[]> = {
   character: ["ROBOT", "BLOB", "SCOUT", "CAIO", "LIA", "ZOMBIE"],
@@ -33,6 +34,7 @@ const definitions: Record<string, string[]> = {
     "LANTERN",
     "DOOR",
     "THERMOMETER",
+    "CAR",
   ],
   action: [
     "IDLE",
@@ -73,7 +75,9 @@ export const resources: Resource[] = Object.entries(definitions).flatMap(
           ? { openProgress: { min: 0, max: 1 } }
           : name === "THERMOMETER"
             ? { value: { min: -150, max: 150 } }
-            : name === "SNOW"
+          : name === "CAR"
+            ? { frost: {min:0,max:1} }
+          : name === "SNOW"
               ? { intensity: { min: 0, max: 1 } }
               : type === "camera"
                 ? { strength: { min: 0, max: 3 } }
@@ -127,6 +131,7 @@ export class Registry {
   constructor(public entries: Resource[] = resources) {
     if (new Set(entries.map((r) => r.id)).size !== entries.length)
       fail("DUPLICATE_RESOURCE_ID", "registry");
+    verifyExecutors(entries);
   }
   getById(id: string) {
     return this.entries.find((r) => r.id === id);

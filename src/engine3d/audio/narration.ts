@@ -133,6 +133,8 @@ export async function narration(
   config = defaultConfig,
   root = process.cwd(),
 ): Promise<NarrationTrack> {
+  if (!Number.isInteger(fps) || fps <= 0)
+    fail("INVALID_PARAMETER", "narration fps must be positive integer");
   const spoken = spokenText(text);
   if (!spoken) fail("NARRATION_EMPTY", sceneId);
   const key = cacheKey(text, config, provider.name),

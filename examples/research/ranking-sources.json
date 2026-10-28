@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "id": "demo-cold-dataset",
+  "fixture": true,
+  "labels": [
+    "DEMO_FIXTURE",
+    "NOT_REAL_WORLD_FACTS"
+  ],
+  "sources": [
+    {
+      "id": "demo-a",
+      "provider": "STATIC_SOURCE_PACK",
+      "sourceType": "PRIMARY_DATASET",
+      "title": "Dataset fictício de teste — demo-a",
+      "publisher": "Dataset Demo A",
+      "publishedAt": "2026-10-28",
+      "retrievedAt": "2026-10-28",
+      "canonicalLocator": "fixture://phase19/demo-a",
+      "language": "pt-BR",
+      "contentType": "text/plain",
+      "content": "A estação Alfa registrou temperatura mínima de -40 °C em 1980.\nA estação Alfa possui população permanente.\nA estação Beta registrou temperatura mínima de -35 °C em 1980.\nA estação Beta possui população permanente.\nA estação Gama registrou temperatura mínima de -30 °C em 1980.\nA estação Gama possui população permanente.\nA estação Delta registrou temperatura mínima de -25 °C em 1980.\nA estação Delta possui população permanente.\nA estação Épsilon registrou temperatura mínima de -20 °C em 1980.\nA estação Épsilon possui população permanente.",
+      "contentHash": "503a9745778a8154bd2702509677fb6fbb5fc057349581ab22301e04ff27edda",
+      "metadata": {
+        "methodology": "Observações inteiramente sintéticas para testar processamento; não são dados do mundo real.",
+        "directEvidence": true
+      },
+      "license": "Synthetic test data",
+      "fixture": true,
+      "provenance": {
+        "originKey": "synthetic-origin-Dataset Demo A",
+        "description": "Conteúdo criado exclusivamente como fixture offline; nenhuma pesquisa real."
+      }
+    },
+    {
+      "id": "demo-b",
+      "provider": "STATIC_SOURCE_PACK",
+      "sourceType": "PRIMARY_DATASET",
+      "title": "Dataset fictício de teste — demo-b",
+      "publisher": "Dataset Demo B",
+      "publishedAt": "2026-10-28",
+      "retrievedAt": "2026-10-28",
+      "canonicalLocator": "fixture://phase19/demo-b",
+      "language": "pt-BR",
+      "contentType": "text/plain",
+      "content": "A estação Alfa apresentou temperatura mínima de -40 °C em 1980.\nHá população permanente na estação Alfa.\nA estação Beta apresentou temperatura mínima de -35 °C em 1980.\nHá população permanente na estação Beta.\nA estação Gama apresentou temperatura mínima de -30 °C em 1980.\nHá população permanente na estação Gama.\nA estação Delta apresentou temperatura mínima de -25 °C em 1980.\nHá população permanente na estação Delta.\nA estação Épsilon apresentou temperatura mínima de -20 °C em 1980.\nHá população permanente na estação Épsilon.",
+      "contentHash": "7e93eef4630dedfe1e8aabceb5202bea06687d1eda5124543f5630e3ec44363a",
+      "metadata": {
+        "methodology": "Observações inteiramente sintéticas para testar processamento; não são dados do mundo real.",
+        "directEvidence": true
+      },
+      "license": "Synthetic test data",
+      "fixture": true,
+      "provenance": {
+        "originKey": "synthetic-origin-Dataset Demo B",
+        "description": "Conteúdo criado exclusivamente como fixture offline; nenhuma pesquisa real."
+      }
+    }
+  ]
+}

@@ -3,3 +3,26 @@ out/
 public/audio/
 .cache/
 __pycache__/
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+!.env.*.example
+secrets/
+credentials.json
+credentials.*.json
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+.pypirc
+
+# Python environments and machine-generated files
+.venv/
+venv/
+*.pyc
+*.log
+.DS_Store
+Thumbs.db

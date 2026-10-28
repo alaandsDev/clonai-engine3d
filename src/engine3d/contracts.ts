@@ -38,13 +38,16 @@ export interface Instance extends Transform {
   finalState?: Record<string, number>;
 }
 export interface Binding {
+  /** Actor is a character instance. VFX: breath=actor+face; frost=actor+anchor XOR prop target. */
   resourceId: string;
   start: number;
   end: number;
   actor?: string;
   target?: string;
   anchor?: Anchor;
+  /** World-space target origin/position. LOOK only projects yaw; no pitch support. */
   targetPosition?: Vec3;
+  /** Nonzero world-space direction. LOOK ignores the local vertical component. */
   direction?: Vec3;
   parameters?: Record<string, number>;
 }

@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "id": "freezing",
+  "language": "pt-BR",
+  "format": "vertical_short",
+  "fps": 30,
+  "canvas": {
+    "width": 480,
+    "height": 854
+  },
+  "script": "Um objeto exposto ao frio extremo começa a acumular gelo até ficar coberto.",
+  "claims": [
+    {
+      "id": "F1",
+      "text": "Um objeto exposto ao frio extremo começa a acumular gelo até ficar coberto.",
+      "type": "OBJECT_STATE",
+      "startOffset": 0,
+      "endOffset": 75,
+      "importance": "PRIMARY",
+      "requiresVisualProof": true
+    }
+  ],
+  "constraints": {
+    "mode": "PLAN_ONLY"
+  }
+}

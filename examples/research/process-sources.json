@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "id": "demo-process-dataset",
+  "fixture": true,
+  "labels": [
+    "DEMO_FIXTURE",
+    "NOT_REAL_WORLD_FACTS"
+  ],
+  "sources": [
+    {
+      "id": "demo-process",
+      "provider": "STATIC_SOURCE_PACK",
+      "sourceType": "PRIMARY_DATASET",
+      "title": "Dataset fictício de teste — demo-process",
+      "publisher": "Dataset Ensaio",
+      "publishedAt": "2026-10-28",
+      "retrievedAt": "2026-10-28",
+      "canonicalLocator": "fixture://phase19/demo-process",
+      "language": "pt-BR",
+      "contentType": "text/tab-separated-values",
+      "content": "Sujeito\tProcesso\tComplemento\tContexto\nágua\tsaída\trecipiente de origem\tensaio fictício\nágua\tpercurso\ttubo\tensaio fictício\nágua\tentrada\trecipiente de destino\tensaio fictício\nnível\taumento\trecipiente de destino\tensaio fictício",
+      "contentHash": "72b79a6a18bde7bc5b0bb140c75149ef54626152d51bb0940cd14c0ee0b0fcdf",
+      "metadata": {
+        "methodology": "Observações inteiramente sintéticas para testar processamento; não são dados do mundo real.",
+        "directEvidence": true
+      },
+      "license": "Synthetic test data",
+      "fixture": true,
+      "provenance": {
+        "originKey": "synthetic-origin-Dataset Ensaio",
+        "description": "Conteúdo criado exclusivamente como fixture offline; nenhuma pesquisa real."
+      }
+    }
+  ]
+}

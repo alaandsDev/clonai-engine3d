@@ -1,0 +1,874 @@
+{
+  "version": 1,
+  "id": "cold-opening-directed",
+  "fps": 30,
+  "width": 480,
+  "height": 854,
+  "totalFrames": 510,
+  "baseShot": {
+    "id": "continuous-world",
+    "durationSeconds": 17,
+    "environment": {
+      "resourceId": "ENV_WINTER_001"
+    },
+    "characters": [
+      {
+        "instanceId": "actor",
+        "resourceId": "CHAR_CAIO_001",
+        "position": [
+          -1.65,
+          0,
+          1.3
+        ],
+        "parameters": {},
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
+    ],
+    "props": [
+      {
+        "instanceId": "door",
+        "resourceId": "PROP_DOOR_001",
+        "parameters": {},
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "instanceId": "map",
+        "resourceId": "PROP_MAP_001",
+        "parameters": {},
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      }
+    ],
+    "actions": [],
+    "vfx": [
+      {
+        "resourceId": "VFX_SNOW_001",
+        "start": 0,
+        "end": 1,
+        "parameters": {
+          "intensity": 0.25
+        }
+      },
+      {
+        "resourceId": "VFX_COLD_BREATH_001",
+        "actor": "actor",
+        "anchor": "face",
+        "start": 0.16,
+        "end": 0.36
+      },
+      {
+        "resourceId": "VFX_FROST_001",
+        "actor": "actor",
+        "anchor": "face",
+        "start": 0.27,
+        "end": 0.36
+      },
+      {
+        "resourceId": "VFX_FROST_001",
+        "actor": "actor",
+        "anchor": "face",
+        "start": 0.65,
+        "end": 1
+      }
+    ],
+    "camera": {
+      "resourceId": "CAM_STATIC_001"
+    }
+  },
+  "initialState": {
+    "actors": {
+      "actor": {
+        "position": [
+          -1.65,
+          0,
+          1.3
+        ],
+        "facing": 1.8
+      }
+    },
+    "props": {
+      "door": {
+        "position": [
+          -0.55,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.9,
+          0.9,
+          0.9
+        ],
+        "visible": true,
+        "parameters": {
+          "openProgress": 0
+        }
+      },
+      "map": {
+        "position": [
+          1.35,
+          -1.5,
+          -0.7
+        ],
+        "rotation": [
+          1.05,
+          0,
+          0.1
+        ],
+        "scale": [
+          1.5,
+          1.5,
+          1.5
+        ],
+        "visible": false,
+        "parameters": {}
+      }
+    },
+    "camera": {
+      "position": [
+        -0.9,
+        2.4,
+        8.8
+      ],
+      "target": [
+        -0.6,
+        1.1,
+        0.15
+      ]
+    }
+  },
+  "finalState": {
+    "actors": {
+      "actor": {
+        "position": [
+          -1.8,
+          0,
+          -0.5
+        ],
+        "facing": 0
+      }
+    },
+    "props": {
+      "door": {
+        "position": [
+          -0.55,
+          0,
+          0
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.9,
+          0.9,
+          0.9
+        ],
+        "visible": true,
+        "parameters": {
+          "openProgress": 1
+        }
+      },
+      "map": {
+        "position": [
+          1.35,
+          -1.5,
+          -0.7
+        ],
+        "rotation": [
+          1.05,
+          0,
+          0.1
+        ],
+        "scale": [
+          1.5,
+          1.5,
+          1.5
+        ],
+        "visible": false,
+        "parameters": {}
+      }
+    },
+    "camera": {
+      "position": [
+        -0.3,
+        2.7,
+        10.2
+      ],
+      "target": [
+        -1,
+        1.15,
+        -0.4
+      ]
+    }
+  },
+  "blocking": [
+    {
+      "startFrame": 0,
+      "endFrame": 45,
+      "easing": "EASE_IN_OUT",
+      "purpose": "Entrar e aproximar-se da porta antes da interação",
+      "actorId": "actor",
+      "startPosition": [
+        -1.65,
+        0,
+        1.3
+      ],
+      "endPosition": [
+        0.65,
+        0,
+        0.7
+      ],
+      "startFacing": 1.8,
+      "endFacing": 1.8,
+      "movementType": "APPROACH",
+      "intent": "ENTER_SCENE",
+      "target": {
+        "type": "PROP",
+        "id": "door",
+        "offset": [
+          0,
+          1,
+          0
+        ]
+      }
+    },
+    {
+      "startFrame": 45,
+      "endFrame": 60,
+      "easing": "EASE_IN_OUT",
+      "purpose": "Virar para a maçaneta",
+      "actorId": "actor",
+      "startPosition": [
+        0.65,
+        0,
+        0.7
+      ],
+      "endPosition": [
+        0.65,
+        0,
+        0.7
+      ],
+      "startFacing": 1.8,
+      "endFacing": -0.7,
+      "movementType": "TURN",
+      "intent": "INTERACT"
+    },
+    {
+      "startFrame": 115,
+      "endFrame": 135,
+      "easing": "EASE_IN_OUT",
+      "purpose": "Reagir ao frio e virar para a explicação",
+      "actorId": "actor",
+      "startPosition": [
+        0.65,
+        0,
+        0.7
+      ],
+      "endPosition": [
+        0.65,
+        0,
+        0.7
+      ],
+      "startFacing": -0.7,
+      "endFacing": 0,
+      "movementType": "TURN",
+      "intent": "REACT"
+    },
+    {
+      "startFrame": 135,
+      "endFrame": 186,
+      "easing": "EASE_IN_OUT",
+      "purpose": "Sair do centro e abrir espaço para o ranking",
+      "actorId": "actor",
+      "startPosition": [
+        0.65,
+        0,
+        0.7
+      ],
+      "endPosition": [
+        -1.2,
+        0,
+        1.7
+      ],
+      "startFacing": 0,
+      "endFacing": 0,
+      "movementType": "SIDESTEP",
+      "intent": "MAKE_SPACE_FOR_TEXT"
+    },
+    {
+      "startFrame": 330,
+      "endFrame": 360,
+      "easing": "EASE_IN_OUT",
+      "purpose": "Contornar a folha aberta antes de recuar",
+      "actorId": "actor",
+      "startPosition": [
+        -1.2,
+        0,
+        1.7
+      ],
+      "endPosition": [
+        -1.8,
+        0,
+        1.7
+      ],
+      "startFacing": 0,
+      "endFacing": 0,
+      "movementType": "SIDESTEP",
+      "intent": "REVEAL_OBJECT"
+    },
+    {
+      "startFrame": 360,
+      "endFrame": 420,
+      "easing": "EASE_IN_OUT",
+      "purpose": "Afastar-se após contornar a porta",
+      "actorId": "actor",
+      "startPosition": [
+        -1.8,
+        0,
+        1.7
+      ],
+      "endPosition": [
+        -1.8,
+        0,
+        -0.5
+      ],
+      "startFacing": 0,
+      "endFacing": 0,
+      "movementType": "RETREAT",
+      "intent": "OBSERVE"
+    }
+  ],
+  "actionSegments": [
+    {
+      "startFrame": 60,
+      "endFrame": 115,
+      "easing": "EASE_IN_OUT",
+      "purpose": "Abrir a porta uma única vez e preservar o progresso final",
+      "resourceId": "ACTION_OPEN_DOOR_001",
+      "actorId": "actor",
+      "targetId": "door",
+      "fromProgress": 0,
+      "toProgress": 1
+    },
+    {
+      "startFrame": 240,
+      "endFrame": 285,
+      "easing": "EASE_IN_OUT",
+      "purpose": "Apresentar o mapa após a entrada do prop",
+      "resourceId": "ACTION_POINT_001",
+      "actorId": "actor",
+      "targetId": "map",
+      "fromProgress": 0,
+      "toProgress": 1
+    }
+  ],
+  "cameraSegments": [
+    {
+      "startFrame": 0,
+      "endFrame": 45,
+      "easing": "EASE_IN_OUT",
+      "purpose": "Acompanhar a aproximação lateral",
+      "cameraId": "CAM_PAN_RIGHT_001",
+      "behavior": "FOLLOW",
+      "startState": {
+        "position": [
+          -0.9,
+          2.4,
+          8.8
+        ],
+        "target": [
+          -0.6,
+          1.1,
+          0.15
+        ]
+      },
+      "endState": {
+        "position": [
+          0.4,
+          2.3,
+          8.2
+        ],
+        "target": [
+          0.3,
+          1.2,
+          0.2
+        ]
+      },
+      "focusTarget": {
+        "type": "ACTOR",
+        "id": "actor",
+        "offset": [
+          0,
+          1.2,
+          0
+        ]
+      }
+    },
+    {
+      "startFrame": 60,
+      "endFrame": 115,
+      "easing": "EASE_IN_OUT",
+      "purpose": "Push durante a abertura, sem cortar estado",
+      "cameraId": "CAM_PUSH_IN_001",
+      "behavior": "MOVE",
+      "startState": {
+        "position": [
+          0.4,
+          2.3,
+          8.2
+        ],
+        "target": [
+          0.3,
+          1.2,
+          0.2
+        ]
+      },
+      "endState": {
+        "position": [
+          0.4,
+          2.3,
+          7.2
+        ],
+        "target": [
+          0.3,
+          1.2,
+          0.2
+        ]
+      }
+    },
+    {
+      "startFrame": 115,
+      "endFrame": 186,
+      "easing": "EASE_IN_OUT",
+      "purpose": "Recompor do gesto para o exterior revelado",
+      "cameraId": "CAM_ORBIT_001",
+      "behavior": "REFRAME",
+      "startState": {
+        "position": [
+          0.4,
+          2.3,
+          7.2
+        ],
+        "target": [
+          0.3,
+          1.2,
+          0.2
+        ]
+      },
+      "endState": {
+        "position": [
+          0,
+          3,
+          10.5
+        ],
+        "target": [
+          -0.35,
+          1.2,
+          -0.7
+        ]
+      },
+      "focusTarget": {
+        "type": "POSITION",
+        "position": [
+          -0.35,
+          1.2,
+          -0.7
+        ]
+      }
+    },
+    {
+      "startFrame": 240,
+      "endFrame": 285,
+      "easing": "EASE_IN_OUT",
+      "purpose": "Reenquadrar o mapa, preservando Caio no terço esquerdo",
+      "cameraId": "CAM_PAN_LEFT_001",
+      "behavior": "MOVE",
+      "startState": {
+        "position": [
+          0,
+          3,
+          10.5
+        ],
+        "target": [
+          -0.35,
+          1.2,
+          -0.7
+        ]
+      },
+      "endState": {
+        "position": [
+          0,
+          2.8,
+          10.5
+        ],
+        "target": [
+          -0.4,
+          1.1,
+          -0.4
+        ]
+      }
+    },
+    {
+      "startFrame": 330,
+      "endFrame": 420,
+      "easing": "EASE_IN_OUT",
+      "purpose": "Pull e parallax na retirada do ator",
+      "cameraId": "CAM_PULL_OUT_001",
+      "behavior": "MOVE",
+      "startState": {
+        "position": [
+          0,
+          2.8,
+          10.5
+        ],
+        "target": [
+          -0.4,
+          1.1,
+          -0.4
+        ]
+      },
+      "endState": {
+        "position": [
+          -0.5,
+          3.1,
+          11.2
+        ],
+        "target": [
+          -1.1,
+          1,
+          -1
+        ]
+      }
+    },
+    {
+      "startFrame": 430,
+      "endFrame": 510,
+      "easing": "EASE_IN_OUT",
+      "purpose": "Aproximar suavemente o rosto congelado, sem fechar o ambiente",
+      "cameraId": "CAM_PUSH_IN_001",
+      "behavior": "MOVE",
+      "startState": {
+        "position": [
+          -0.5,
+          3.1,
+          11.2
+        ],
+        "target": [
+          -1.1,
+          1,
+          -1
+        ]
+      },
+      "endState": {
+        "position": [
+          -0.3,
+          2.7,
+          10.2
+        ],
+        "target": [
+          -1,
+          1.15,
+          -0.4
+        ]
+      }
+    }
+  ],
+  "propMotions": [
+    {
+      "startFrame": 186,
+      "endFrame": 225,
+      "easing": "EASE_IN_OUT",
+      "purpose": "Mapa sobe para identificar Yakutsk, depois permanece visível",
+      "propId": "map",
+      "type": "RISE",
+      "from": {
+        "position": [
+          1.35,
+          -1.5,
+          -0.7
+        ],
+        "rotation": [
+          1.05,
+          0,
+          0.1
+        ],
+        "scale": [
+          1.5,
+          1.5,
+          1.5
+        ],
+        "visible": false
+      },
+      "to": {
+        "position": [
+          1.35,
+          1.1,
+          -0.7
+        ],
+        "rotation": [
+          1.05,
+          0,
+          0.1
+        ],
+        "scale": [
+          1.5,
+          1.5,
+          1.5
+        ],
+        "visible": true
+      }
+    },
+    {
+      "startFrame": 285,
+      "endFrame": 330,
+      "easing": "EASE_IN_OUT",
+      "purpose": "Retirar o mapa antes de mudar para o frio exterior",
+      "propId": "map",
+      "type": "LOWER",
+      "from": {
+        "position": [
+          1.35,
+          1.1,
+          -0.7
+        ],
+        "rotation": [
+          1.05,
+          0,
+          0.1
+        ],
+        "scale": [
+          1.5,
+          1.5,
+          1.5
+        ],
+        "visible": true
+      },
+      "to": {
+        "position": [
+          1.35,
+          -1.5,
+          -0.7
+        ],
+        "rotation": [
+          1.05,
+          0,
+          0.1
+        ],
+        "scale": [
+          1.5,
+          1.5,
+          1.5
+        ],
+        "visible": false
+      }
+    }
+  ],
+  "focusSegments": [
+    {
+      "startFrame": 0,
+      "endFrame": 60,
+      "easing": "EASE_IN_OUT",
+      "purpose": "Foco no ator chegando",
+      "target": {
+        "type": "ACTOR",
+        "id": "actor",
+        "offset": [
+          0,
+          1.2,
+          0
+        ]
+      }
+    },
+    {
+      "startFrame": 60,
+      "endFrame": 135,
+      "easing": "EASE_IN_OUT",
+      "purpose": "Foco na abertura",
+      "target": {
+        "type": "PROP",
+        "id": "door",
+        "offset": [
+          0,
+          1.2,
+          0
+        ]
+      }
+    },
+    {
+      "startFrame": 186,
+      "endFrame": 285,
+      "easing": "EASE_IN_OUT",
+      "purpose": "Foco no lugar apresentado",
+      "target": {
+        "type": "PROP",
+        "id": "map",
+        "offset": [
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "startFrame": 300,
+      "endFrame": 510,
+      "easing": "EASE_IN_OUT",
+      "purpose": "Foco no ator dentro do exterior",
+      "target": {
+        "type": "ACTOR",
+        "id": "actor",
+        "offset": [
+          0,
+          1.2,
+          0
+        ]
+      }
+    }
+  ],
+  "shots": [
+    {
+      "id": "door-continuous",
+      "startFrame": 0,
+      "endFrame": 115,
+      "transition": "CONTINUE"
+    },
+    {
+      "id": "outside-reframe",
+      "startFrame": 115,
+      "endFrame": 186,
+      "transition": "CONTINUE"
+    },
+    {
+      "id": "ranking-reveal",
+      "startFrame": 186,
+      "endFrame": 300,
+      "transition": "CONTINUE",
+      "onScreenText": "#5 YAKUTSK"
+    },
+    {
+      "id": "winter-proof",
+      "startFrame": 300,
+      "endFrame": 510,
+      "transition": "CONTINUE"
+    }
+  ],
+  "captions": [
+    {
+      "text": "Você abre a",
+      "startFrame": 0,
+      "endFrame": 26
+    },
+    {
+      "text": "porta de casa...",
+      "startFrame": 26,
+      "endFrame": 53
+    },
+    {
+      "text": "e o frio",
+      "startFrame": 53,
+      "endFrame": 79
+    },
+    {
+      "text": "é tão brutal",
+      "startFrame": 79,
+      "endFrame": 106
+    },
+    {
+      "text": "que até seus",
+      "startFrame": 106,
+      "endFrame": 132
+    },
+    {
+      "text": "cílios começam a",
+      "startFrame": 132,
+      "endFrame": 159
+    },
+    {
+      "text": "congelar.",
+      "startFrame": 159,
+      "endFrame": 186
+    },
+    {
+      "text": "Em quinto, Yakutsk,",
+      "startFrame": 186,
+      "endFrame": 237
+    },
+    {
+      "text": "na Sibéria.",
+      "startFrame": 237,
+      "endFrame": 289
+    },
+    {
+      "text": "No inverno, sair",
+      "startFrame": 289,
+      "endFrame": 325
+    },
+    {
+      "text": "de casa significa",
+      "startFrame": 325,
+      "endFrame": 362
+    },
+    {
+      "text": "enfrentar um frio",
+      "startFrame": 362,
+      "endFrame": 399
+    },
+    {
+      "text": "capaz de congelar",
+      "startFrame": 399,
+      "endFrame": 436
+    },
+    {
+      "text": "cílios... e cobrir",
+      "startFrame": 436,
+      "endFrame": 473
+    },
+    {
+      "text": "carros de gelo.",
+      "startFrame": 473,
+      "endFrame": 510
+    }
+  ]
+}
