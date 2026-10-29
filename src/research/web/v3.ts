@@ -1,4 +1,5 @@
 import { jsonHash } from '../../editorial/fingerprint';
+import {processQueries} from '../process-planning';
 import { normalize } from '../../semantics/normalize';
 import { planResearch } from '../planner';
 import { buildEvidencePack } from '../pack';
@@ -46,6 +47,7 @@ function vocabulary(plan: ResearchPlan) {
 const query = (plan: ResearchPlan, round: number, purpose: QueryPurpose, text: string, extra: Partial<SearchQuery> = {}): SearchQuery => { const stage: SearchQuery['stage'] = purpose === 'ENTITY_DISCOVERY' ? 'ENTITY_DISCOVERY' : purpose === 'CORROBORATION_DISCOVERY' ? 'CORROBORATION' : purpose === 'METRIC_DISCOVERY' && round === 0 ? 'BROAD_DISCOVERY' : 'FACT_VERIFICATION'; const raw = { round, stage, researchQuestionIds: plan.essentialResearchQuestionIds, text: text.replace(/\s+/g, ' ').trim(), entityName: null, entitySourceIds: [], followupReason: purpose, purpose, ...extra }; return { ...raw, id: 'Q_' + jsonHash(raw).slice(0, 16) }; };
 /** R0 queries: the Phase 21 plan queries plus list/record vocabulary for a larger candidate pool. */
 export function broadQueriesV3(plan: ResearchPlan, config: WebResearchConfig): SearchQuery[] {
+    if (plan.policy.mechanismVersion === 2) return processQueries(plan);
     const v = vocabulary(plan), base = broadQueriesV2(plan, config).map(q => ({ ...q, purpose: 'ENTITY_DISCOVERY' as QueryPurpose, derivedFrom: 'PLAN', targetGap: 'CANDIDATE_POOL' }));
     const extra = plan.request.constraints?.metric === 'POPULATION' ? [] : [query(plan, 0, 'ENTITY_DISCOVERY', 'list of extreme temperatures', { derivedFrom: 'PLAN_VOCABULARY', targetGap: 'CANDIDATE_POOL' }), query(plan, 0, 'METRIC_DISCOVERY', v.metric + ' ' + v.residency, { derivedFrom: 'PLAN_VOCABULARY', targetGap: 'CANDIDATE_POOL' })];
     return [...base, ...extra];

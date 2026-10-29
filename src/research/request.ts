@@ -33,8 +33,11 @@ export function validateResearchRequest(r: ResearchRequest) {
     const p = r.sourcePolicy;
     if (p) {
         for (const k of Object.keys(p))
-            if (!['minIndependentSources', 'minPrimaryQuality', 'allowFahrenheitConversion', 'allowEnglishExtraction', 'temporalComparison', 'maxSourceBytes', 'maxTotalSourceBytes', 'maxNormalizedCharacters', 'evaluationDate', 'researchVersion', 'factTypeQuorum', 'residencyMaxAgeYears', 'observationSitePolicy'].includes(k))
+            if (!['minIndependentSources', 'minPrimaryQuality', 'allowFahrenheitConversion', 'allowEnglishExtraction', 'temporalComparison', 'maxSourceBytes', 'maxTotalSourceBytes', 'maxNormalizedCharacters', 'evaluationDate', 'researchVersion', 'factTypeQuorum', 'residencyMaxAgeYears', 'observationSitePolicy', 'mechanismVersion', 'contextualMechanisms'].includes(k))
                 throw Error('RESEARCH_POLICY unknown ' + k);
+        if(p.contextualMechanisms!==undefined&&(p.contextualMechanisms!==true||p.mechanismVersion!==2))throw Error('RESEARCH_POLICY contextualMechanisms requires mechanismVersion 2');
+        if (p.mechanismVersion !== undefined && (p.mechanismVersion !== 2 || r.researchGoal !== 'PROCESS' || (p.researchVersion ?? 1) < 2))
+            throw Error('RESEARCH_POLICY mechanismVersion requires PROCESS and researchVersion >= 2');
         if (p.researchVersion !== undefined && ![1, 2, 3, 4].includes(p.researchVersion))
             throw Error('RESEARCH_POLICY version');
         if ((p.factTypeQuorum !== undefined || p.residencyMaxAgeYears !== undefined) && (p.researchVersion ?? 1) < 2)

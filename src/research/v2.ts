@@ -1,5 +1,7 @@
 import { jsonHash } from '../editorial/fingerprint';
 import { extractMechanismEvidence } from './mechanism';
+import { extractMechanismV2 } from './mechanism-v2';
+import {extractContextualMechanisms} from './contextual-mechanism';
 import { normalize } from '../semantics/normalize';
 import { extractSourceEvidence } from './extractor';
 import { extractEnglish } from './english';
@@ -33,7 +35,7 @@ export function extractSourceEvidenceV2(s: SourceDocument, plan: ResearchPlan, m
     const v3 = (policy.researchVersion ?? 1) >= 3, contexts: DocumentContextSummary[] = [], records: Omit<StructuredRecord, 'evidenceIds'>[] = [];
     const prose = s.language === 'en' ? extractEnglish(s, policy, Number.MAX_SAFE_INTEGER, policy.researchVersion === 4 ? 4 : v3 ? 3 : 2) : extractSourceEvidence(s, { ...policy, researchVersion: 1 }, Number.MAX_SAFE_INTEGER);
     // Phase 25: PROCESS routes also read literal mechanism clauses from documents about the requested subject.
-    if (plan.request.researchGoal === 'PROCESS') { const m = extractMechanismEvidence(s, plan); prose.evidence.push(...m.evidence); prose.candidates.push(...m.candidates); }
+    if (plan.request.researchGoal === 'PROCESS') { const m = policy.contextualMechanisms ? extractContextualMechanisms(s,plan) : policy.mechanismVersion === 2 ? extractMechanismV2(s, plan) : extractMechanismEvidence(s, plan); prose.evidence.push(...m.evidence); prose.candidates.push(...m.candidates); }
     if (v3 && s.contentType === 'text/html') {
         // Phase 22: DocumentContext + context-aware tables + semi-structured records.
         const x = structuredV3(s, plan, parseHtmlStructures(s.content, host));

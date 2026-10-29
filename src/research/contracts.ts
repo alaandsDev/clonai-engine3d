@@ -25,6 +25,10 @@ export interface ResearchPolicy {
     residencyMaxAgeYears?: number;
     /** v3: whether a measurement at an observation site may stand for a place. SOURCED_OBSERVATION_SITE requires a source-backed OBSERVATION_SITE_FOR/SAME_ENTITY relation; never name similarity alone. */
     observationSitePolicy?: 'SAME_ENTITY_ONLY' | 'SOURCED_OBSERVATION_SITE';
+    /** Phase26 process grammar/story opt-in; absent keeps historical extraction and replay. */
+    mechanismVersion?: 2;
+    /** Phase26B conservative contextual recovery; absent preserves Phase26 goldens. */
+    contextualMechanisms?: true;
 }
 export interface FactTypeQuorum {
     minIndependentOrigins: number;
@@ -186,9 +190,10 @@ export interface Evidence {
     supports: CanonicalFact;
     extractionConfidence: 'HIGH' | 'MEDIUM';
     truthStatus: 'EXTRACTED';
-    extractionMethod: 'MECHANISM_PT_V1' | 'LITERAL_PT_V1' | 'TABLE_PT_V1' | 'LITERAL_EN_V1' | 'LITERAL_EN_V2' | 'TABLE_HTML_V2' | 'LIST_HTML_V2' | 'DEFINITION_HTML_V2' | 'KEY_VALUE_HTML_V2' | 'DATASET_V2' | 'RECORD_HTML_V3';
+    extractionMethod: 'MECHANISM_V2' | 'MECHANISM_PT_V1' | 'LITERAL_PT_V1' | 'TABLE_PT_V1' | 'LITERAL_EN_V1' | 'LITERAL_EN_V2' | 'TABLE_HTML_V2' | 'LIST_HTML_V2' | 'DEFINITION_HTML_V2' | 'KEY_VALUE_HTML_V2' | 'DATASET_V2' | 'RECORD_HTML_V3';
     evidenceLanguage?: 'en';
     contextSpans?: SourceSpan[];
+    mechanismContext?: {kind:'EXPLICIT_RELATION'|'CONTEXT_RESOLVED_RELATION';documentId:string;paragraphIndex:number;sentenceIndex:number;supportingSpans:SourceSpan[];cleaningRules:string[]};
     contentHash: string;
     table: {
         row: number;

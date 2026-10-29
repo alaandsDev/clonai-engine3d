@@ -27,3 +27,4 @@ export function writeTopic(request:TopicScriptRequest,snapshot:CapabilityNode[]=
  const raw={version:'topic-writer/1.0.0',request:req,policy:writerPolicy(req),topicAnalysis,capabilityProfile:profile,capabilityMatch,strategies,candidates,candidatePreflights,revisionHistory:revisions,selection,similarity,finalCandidate,finalPreflight,status:finalPreflight?'READY' as const:requiresSource?'SOURCE_REQUIRED' as const:generated.length?'NO_ACCEPTABLE_CANDIDATE' as const:'UNSUPPORTED_TOPIC' as const,reason:finalPreflight?'Capability-constrained topic-to-script with fresh final semantic/narrative/visual preflight':capabilityMatch.reason};
  return{...raw,fingerprint:jsonHash(raw)};
 }
+export {writeCausalCuriosity,verifyCuriosityWriter} from './curiosity';

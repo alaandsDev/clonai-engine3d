@@ -57,6 +57,9 @@
     "check:research-v4": "tsx --test tests/research-v4.test.ts",
     "check:topic-intelligence": "tsx --test tests/topic-intelligence.test.ts",
     "check:vertical-slice": "tsx --test tests/vertical-slice.test.ts",
+    "check:causal-curiosity": "tsx --test tests/causal-curiosity.test.ts",
+    "check:contextual-mechanism": "tsx --test tests/contextual-mechanism.test.ts",
+    "curiosity:run": "tsx cli/curiosity.ts",
     "vertical:run": "tsx cli/vertical-slice.ts"
   },
   "dependencies": {

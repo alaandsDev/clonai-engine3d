@@ -1,4 +1,5 @@
 import {jsonHash} from '../../editorial/fingerprint';
+import {processQueries,processAcquisitionSatisfied} from '../process-planning';
 import {planResearch} from '../planner';
 import {buildEvidencePack} from '../pack';
 import {registrableDomain} from '../origins';
@@ -21,16 +22,19 @@ export async function runWebResearchV4(request:ResearchRequest,config:WebResearc
  const v=config.v4!,plan=planResearch(request),env=options.env??nodeEnvironment,start=env.now(),client=new SecureHttpClient(config,env);client.deadline=start+config.maxDurationMs;
  const providers:Partial<Record<DiscoveryStrategy,SearchProvider>>={MEDIAWIKI_REFERENCE_SEARCH:options.searchProvider??new MediaWikiSearchProvider(client),WIKIDATA_ENTITY_DISCOVERY:new WikidataEntityProvider(client,config.v2?.wikidataEndpoint??'https://www.wikidata.org/w/api.php'),CROSSREF_WORKS_SEARCH:new CrossrefWorksProvider(client,config.v2?.crossrefEndpoint??'https://api.crossref.org/works'),DATACITE_DATASET_SEARCH:new DataCiteDatasetProvider(client,v.dataCiteEndpoint),CKAN_DATASET_SEARCH:new CkanDatasetProvider(client,v.ckanEndpoint),...options.extraProviders};
  const fetcher=new WebSourceProvider(client,options.cache),queries:SearchQuery[]=[],results:SearchResult[]=[],trace:ResearchSession['searchTrace']=[],candidates:CandidateSource[]=[],attempts:FetchAttempt[]=[],rejected:ResearchSession['rejectedSources']=[],diagnostics:string[]=[],intents:AcquisitionIntent[]=[],derivedAttempts:AcquisitionAttempt[]=[],discovery:NonNullable<ResearchSession['v3']>['discovery']=[],cache=new Map<string,EvidencePack>();
- const tried=new Set<string>(),domainCounts=new Map<string,number>(),asked=new Set<string>(),caps=providerCapabilities();let prior:FactGap[]=[],rounds=1;
+ const tried=new Set<string>(),domainCounts=new Map<string,number>(),asked=new Set<string>(),caps=providerCapabilities();let prior:FactGap[]=[],rounds=1,processRateLimited=false;
  const exhausted=()=>env.now()-start>=config.maxDurationMs||client.bytes>=config.maxTotalBytes||attempts.length>=config.maxFetchedSources;
  const snapshot=()=>fetcher.receive(plan).sources;
  const ids=()=>snapshot().map(s=>s.id).sort();
  const pack=()=>{const k=ids().join('|');let p=cache.get(k);if(!p){p=buildEvidencePack(request,fetcher);cache.set(k,p);}return p;};
  const search=async(provider:DiscoveryStrategy,q:SearchQuery,limit:number)=>{
+  if(plan.policy.mechanismVersion===2&&processRateLimited)return{results:[] as SearchResult[],diagnostic:'PROCESS_PROVIDER_RATE_LIMIT_STOP',latencyMs:0};
   if(exhausted()||queries.length>=config.maxQueries||results.length>=config.maxSearchResults||asked.has(provider+'|'+q.text))return {results:[] as SearchResult[],diagnostic:'ACQUISITION_BUDGET_OR_DUPLICATE_QUERY',latencyMs:0};
   const traced={...q,provider};queries.push(traced);asked.add(provider+'|'+q.text);
   let found;try{found=await providers[provider]!.search(traced,Math.min(limit,config.maxResultsPerQuery,config.maxSearchResults-results.length));}catch(e){found={results:[],diagnostic:'PROVIDER_FAILURE '+String(e),latencyMs:0};}
-  results.push(...found.results);trace.push({query:traced,resultCount:found.results.length,diagnostic:found.diagnostic,latencyMs:found.latencyMs});if(found.diagnostic)diagnostics.push(provider+' '+found.diagnostic);return found;
+  results.push(...found.results);trace.push({query:traced,resultCount:found.results.length,diagnostic:found.diagnostic,latencyMs:found.latencyMs});if(found.diagnostic)diagnostics.push(provider+' '+found.diagnostic);
+  if(plan.policy.mechanismVersion===2&&/HTTP 429/.test(found.diagnostic??''))processRateLimited=true;
+  return found;
  };
  const fetch=async(c:CandidateSource,provider:DiscoveryStrategy,q:SearchQuery|null,meta:{gapId:string|null;factId:string|null;path:string;datasetTarget?:SourceInput['metadata']['datasetTarget']})=>{
   if(exhausted()||tried.has(c.canonicalUrl)||(domainCounts.get(c.domain)??0)>=config.maxSourcesPerDomain||candidates.length>=config.maxCandidateSources)return null;
@@ -45,6 +49,19 @@ export async function runWebResearchV4(request:ResearchRequest,config:WebResearc
  // Reference corpus establishes candidates only. No previous-phase snapshots or factual seeds enter acquisition.
  for(const q of broadQueriesV3(plan,config).slice(0,2))await search('MEDIAWIKI_REFERENCE_SEARCH',q,config.maxResultsPerQuery);
  for(const c of candidateSources(results,queries,config).slice(0,Math.min(v.bootstrapFetches,config.maxFetchedSources)))await fetch(c,'MEDIAWIKI_REFERENCE_SEARCH',queries.find(q=>c.queryIds.includes(q.id))??null,{gapId:null,factId:null,path:'R0 v4 bootstrap'});
+ // PROCESS-only bounded bootstrap: query trace retains each missing relation.
+ if(plan.policy.mechanismVersion===2){
+  for(let round=1;round<=config.maxResearchRounds&&!exhausted()&&!processAcquisitionSatisfied(pack());round++){
+   const qs=processQueries(plan,pack(),round).filter(q=>!asked.has('MEDIAWIKI_REFERENCE_SEARCH|'+q.text)).slice(0,2);
+   if(!qs.length)break;
+   for(const q of qs){const found=await search('MEDIAWIKI_REFERENCE_SEARCH',q,config.maxResultsPerQuery);
+    for(const c of candidateSources(found.results,queries,config).slice(0,2))await fetch(c,'MEDIAWIKI_REFERENCE_SEARCH',q,{gapId:null,factId:null,path:'PROCESS_REQUIREMENT '+q.targetGap});
+   }
+  }
+  // Citation discovery never asserts independence or factual content.
+  const refs=[...new Set(pack().evidence.filter(e=>e.extractionMethod==='MECHANISM_V2').flatMap(e=>e.citations??[]))].sort().slice(0,2);
+  for(const url of refs)try{const u=canonicalUrl(url);await fetch({id:'C_'+jsonHash(u).slice(0,16),canonicalUrl:u,domain:new URL(u).hostname,queryIds:[],researchQuestionIds:plan.essentialResearchQuestionIds,discoveryRanks:[],title:'Original cited source',expectedSourceType:'OTHER',fetchStatus:'PENDING',selectionScore:50,reasons:['PROCESS_CITATION_PURSUIT']},'REFERENCE_FOLLOWING',null,{gapId:null,factId:null,path:'PROCESS_CITATION_PURSUIT'});}catch(e){diagnostics.push('PROCESS_REFERENCE_REJECTED '+String(e));}
+ }
  const bootstrapSourceIds=ids(),bootstrapAttempts=attempts.length;let current=pack();
  for(let round=1;round<=config.maxResearchRounds&&!exhausted()&&current.quality.productionEligibility!=='RESEARCH_READY';round++){
   rounds=round;

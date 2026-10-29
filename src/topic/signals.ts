@@ -20,6 +20,7 @@ export const SIGNAL_RULES:SignalRule[]=[
  {id:'explain.imperative',intent:'EXPLANATION',feature:'imperative-explain',pattern:words('expli(?:que|ca|car)|entenda|descreva|mostre como|explain|describe')},
  {id:'explain.why',intent:'EXPLANATION',feature:'why',pattern:words('por ?que|por qual motivo|por qual razao|why')},
  {id:'process.mechanism',intent:'PROCESS',feature:'process',pattern:words('processo|etapas?|passo a passo|mecanismo|funcion(?:a|am)|funcionamento|process|steps|mechanism|works?')},
+ {id:'process.ability',intent:'PROCESS',feature:'manner-change',pattern:words('como (?:(?:um|uma|o|a|os|as) )?(?:[a-z]+ ){1,5}consegue(?:m)? [a-z]+|how (?:can|does|do) (?:[a-z]+ ){1,5}(?:cool|heat|move|compress|rotate|filter|lift)')},
  {id:'process.manner-change',intent:'PROCESS',feature:'manner-change',pattern:words('(?:como|how) (?:(?:e que|que|os|as|o|a|um|uma|the|do|does) )*(?:[a-z]+ ){0,3}(?:mud(?:a|am)|alter(?:a|am)|transform(?:a|am)|vir(?:a|am)|convert(?:e|em)|produz(?:em)?|ger(?:a|am)|form(?:a|am)|cri(?:a|am)|cresc(?:e|em)|vo(?:a|am)|respir(?:a|am)|enxerg(?:a|am)|se formam?|change|changes|turn|turns|produce|produces|form|forms|grow|grows|fly|flies)')},
  {id:'cause.markers',intent:'CAUSE_EFFECT',feature:'causal',pattern:words('por ?que|causas?|causam|efeitos?|consequencias?|leva a|provoca|resulta em|why|causes?|effects?|consequences?|leads? to')},
  {id:'cause.state-change',intent:'CAUSE_EFFECT',feature:'state-change',pattern:words('mud(?:a|am) de|alter(?:a|am)|transform(?:a|am)|change(?:s)? (?:its |their )?colou?r|change(?:s)?')},

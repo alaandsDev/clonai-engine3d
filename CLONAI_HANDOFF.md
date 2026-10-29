@@ -1,3 +1,57 @@
+# ClonAI — handoff do checkpoint lógico Phase26 + Phase26B
+
+Atualização de finalização em 2026-10-29. Esta seção é o estado atual; o handoff da Fase20 permanece integralmente abaixo como histórico. Suas referências a master, Fase21 não iniciada e migração inicial não descrevem o checkout atual.
+
+## Estado aprovado para o checkpoint
+
+- Projeto/repositório: clonai-engine3d, `alaandsDev/clonai-engine3d`, privado; branch `main`.
+- Checkpoint anterior oficial: `19d55834c38d0fdf3dea86c4708cdf0db637dd63` (Phase25).
+- Phase26 COMPLETE; Phase26B COMPLETE; P14/P15/P16 PASS nos mínimos definidos.
+- Inicial Phase26: INCOMPLETE, 2/8 useful, 2/8 ADEQUATE/RICH, 2/8 Writer eligible. Histórico preservado em PHASE26_REPORT.md.
+- Após Phase26B: 6/8 useful mechanism knowledge; 6/8 story ADEQUATE/RICH; 6/8 Writer eligible.
+- Process knowledge PARTIAL; mechanism extraction PARTIAL; generalização limitada, PASS na bateria definida.
+- Zero RICH, zero cadeias reais Problem/Solution, maior cadeia física real de 1 aresta e MechanismChainCoverage = 0 nos oito casos.
+- Phase27Readiness PARTIAL: 6 PARTIAL, 2 NOT_READY, 0 READY. LEVEL4C+ mantido.
+- Registry: Engine3D 50 / SFX 8 / VISUAL 5. Nenhum recurso ou vídeo novo nesta finalização.
+- Phase27 NOT STARTED. Esta finalização não autoriza iniciar implementação ou design da fase seguinte.
+
+| Caso | Relações | Story | Writer | Palavras |
+|---|---:|---|---|---:|
+| A — poço | 4 | ADEQUATE | SCRIPT_GROUNDED | 64 |
+| B — turbina | 4 | ADEQUATE | SCRIPT_GROUNDED | 97 |
+| C — motor a jato | 4 | ADEQUATE | SCRIPT_GROUNDED | 63 |
+| D — bomba d'água | 0 | INSUFFICIENT | BLOCKED | 0 |
+| E — geladeira | 0 | INSUFFICIENT | BLOCKED | 0 |
+| F — elevador | 9 | ADEQUATE | SCRIPT_GROUNDED | 138 |
+| G — usina hidrelétrica | 3 | ADEQUATE | SCRIPT_GROUNDED | 50 |
+| H — tratamento de água | 3 | ADEQUATE | SCRIPT_GROUNDED | 117 |
+
+São 27 relações finais, 18 novas e 24 usadas pelo Writer. Revisão manual finita dos snapshots: 27 CORRECT, 0 QUESTIONABLE final, 0 WRONG final e Writer-used Wrong = 0. Isso mede suporte no snapshot, sem demonstrar corroboração independente geral ou verdade universal. D permanece bloqueado por identidade; E não teve aquisição no snapshot após HTTP429. Recusas deliberadas de A/B/G e ausência de segunda origem útil geral continuam limites.
+
+## KnowledgeLossTrace e interpretação
+
+Ler PHASE26_REPORT.md e src/curiosity/knowledge-loss.ts. Um automatic passage join indica pelo menos uma relação, sem certificar compreensão de todas as orações. Quando nenhum candidate é emitido, subject/relation internals permanecem UNKNOWN. As dez janelas revisadas são diagnósticos, não denominador de recall nem Evidence manual. A oração principal de G foi recuperada, mas sua relativa/coreferência não; a hipótese preliminar de antecedente foi revisada e a atribuição ambígua continua recusada. USED_FOR não é SOLVES; propósito não é causa efetiva.
+
+## Retomada pelo repositório
+
+Ler AGENTS.md, esta seção, PHASE26_REPORT.md, PHASE25_REPORT.md e PHASE24_REPORT.md; depois src/curiosity/README.md e os contratos relevantes. Conferir branch, HEAD e árvore de trabalho antes de agir. O relatório consolidado preserva o resultado inicial INCOMPLETE e documenta limites de narrativa, conexão e fonte.
+
+A rota factual PROCESS usa mechanismVersion2 e contextualMechanisms:true de forma opt-in. Sem o opt-in, os caminhos históricos continuam disponíveis. Knowledge, graph, story e Writer são derivados das evidências admitidas; contexto e intents editoriais não adicionam relações factuais ou prova visual. SCRIPT_GROUNDED não significa MP4 ou visual production eligible.
+
+Os 21 comandos finais foram reexecutados: PASS, 961 testes únicos (não somar as suítes especializadas). Replay reexecutado antes desta atualização documental: 16 processamentos, 8 KnowledgeLossTrace, 4 referências históricas e 12 estágios puros Phase25; fingerprints iguais, ZERO NETWORK. Anti-hardcode PASS, 190 arquivos de runtime, 0 BLOCKER e controle negativo detectado. Segurança HTTP/SSRF/DNS/socket/redirect/robots/MIME/charset/limites preservada; sem atualização de dependências.
+
+Os helpers de tools/phase26/ e tools/phase26b/ são operadores do checkpoint de implementação, com paths ignorados e algumas verificações fixadas ao HEAD anterior e ao handoff antigo. O hash histórico do handoff corresponde à versão recuperável via `git show 19d55834c38d0fdf3dea86c4708cdf0db637dd63:CLONAI_HANDOFF.md`; esta revisão de documentação foi feita depois do replay. Não regravar baselines ou executar geradores de relatório históricos sem revisar os seus destinos.
+
+Git não transporta out/, snapshots adquiridos, vídeos, caches, previews ou áudios derivados. Para reprodução exata, preservar separadamente out/engine3d/phase26/, inclusive phase26b-baseline/, phase26b/attempts/final/, reviews, aquisições e referências históricas usadas pelo replay. Na ausência desses artifacts, reportar indisponibilidade em vez de fazer nova pesquisa e chamá-la de replay. Não incluir esses diretórios no commit nem expor configurações/credenciais.
+
+## Finalização autorizada
+
+A orientação específica de finalização autoriza um único commit com mensagem `Phase26 causal curiosity and contextual mechanism recovery` e push normal para origin/main. Não autoriza force-push, tag, nova arquitetura, novos assets ou Phase27. O SHA deste próprio commit não é incorporado ao arquivo; conferir `git rev-parse HEAD`, o pai Phase25 e `git ls-remote origin refs/heads/main` para a identidade publicada. A confirmação operacional consta da resposta de finalização.
+
+---
+
+# Handoff histórico da Fase20 — preservado integralmente
+
 # ClonAI — handoff após a Fase 20
 
 Estado registrado em 2026-10-28. Este documento permite retomar o projeto pelo código e pelos relatórios, sem depender do histórico de uma conta de chat.

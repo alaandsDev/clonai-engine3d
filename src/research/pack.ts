@@ -1,4 +1,5 @@
 import { jsonHash } from '../editorial/fingerprint';
+import {processCoverage} from '../curiosity/knowledge';
 import { planResearch } from './planner';
 import { intakeSources, assessSource } from './source';
 import { extractSourceEvidence } from './extractor';
@@ -36,6 +37,15 @@ export function buildEvidencePack(request: ResearchRequest, input: SourcePack | 
         criticalCoverage = 0;
     }
     const raw = { version: 'evidence-pack/1.0.0', topic: request.topic, fixture: snapshot.fixture, labels: [...snapshot.labels].sort(), researchPlan: plan, sources, sourceAssessments, evidence, factCandidates, groundedFacts, conflicts, unresolvedQuestions, ranking, essentialResearchQuestionIds: plan.essentialResearchQuestionIds, essentialFactIds, coverage, quality: { sourceCount: sources.length, acceptedSourceCount: accepted.size, rejectedSourceCount: sources.length - accepted.size, evidenceCount: evidence.length, groundedFactCount: usable.length, corroboratedFactCount: groundedFacts.filter(f => f.status === 'CORROBORATED').length, conflictCount: conflicts.length, unresolvedCount: unresolvedQuestions.length, criticalCoverage, rankingValidity: ranking?.status ?? 'NOT_REQUESTED', productionEligibility: critical && !plan.ambiguities.length && !missingRequestedTypes.length ? 'RESEARCH_READY' as const : 'RESEARCH_INCOMPLETE' as const, publisherCount: new Set(sources.map(s => s.publisher.toLowerCase())).size, independentOriginCount: v2 ? v2.independentOriginGroups : origins.length }, ...(v2 ? { v2: v2.section } : {}), ...(v3 ? { v3: v3.section } : {}) };
+    if (plan.policy.mechanismVersion === 2 && processCoverage(groundedFacts).status !== 'READY') {
+        raw.quality.productionEligibility = 'RESEARCH_INCOMPLETE';
+        raw.unresolvedQuestions = plan.questions.map(q=>({id:q.id,reason:'PROCESS_KNOWLEDGE_THIN: explicit mechanism plus complementary relation required'}));
+        raw.quality.unresolvedCount = raw.unresolvedQuestions.length;
+        raw.coverage.researchQuestionCoverage = 0;
+        raw.coverage.unresolvedQuestionRate = 1;
+        raw.quality.criticalCoverage = 0;
+        raw.coverage.criticalFactCoverage = 0;
+    }
     if (version === 4) {
         const fitness = entityTypeFitness(raw);
         const rankingV4 = rankFacts(plan, groundedFacts, v3?.sites, new Map(fitness.map(f=>[f.entity,f.fitness])));
