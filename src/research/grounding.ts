@@ -10,7 +10,15 @@ export const groundedEditorial = [
     'Em resumo, acompanhe o exemplo documentado e compare as partes descritas, sem transformar estes dados fictícios em afirmações sobre o mundo real.',
     'Por fim, observe somente o conteúdo apresentado nesta representação, sem imaginar uma explicação adicional para os fatos do conjunto de dados.',
 ];
-export function allowedGroundedEditorial(pack: EvidencePack): string[] { return pack.fixture ? groundedEditorial : [
+/** Phase 25: non-factual connective lines for PROCESS packs (no entity, number, cause or topic word). */
+export const processEditorial = [
+    'Você já se perguntou o que acontece por dentro desse sistema enquanto ele trabalha, longe dos nossos olhos?',
+    'Acompanhe o processo descrito pelas fontes consultadas, uma etapa de cada vez, com atenção ao papel de cada parte.',
+    'Observe a ordem das etapas apresentadas e como cada uma prepara a seguinte dentro do mesmo sistema.',
+    'Em resumo, essas são as etapas documentadas pelas fontes consultadas, sem acrescentar detalhes que elas não descrevem.',
+    'E agora, quando você pensar nesse sistema, consegue imaginar cada etapa acontecendo do começo ao fim?',
+];
+export function allowedGroundedEditorial(pack: EvidencePack): string[] { return pack.fixture ? groundedEditorial : pack.researchPlan.request.researchGoal === 'PROCESS' ? processEditorial : [
     'Observe os fatos documentados nas fontes consultadas, com atenção às medidas apresentadas e ao contexto que acompanha cada informação.',
     'Acompanhe os dados apresentados nesta explicação, mantendo a atenção nas medidas e nos contextos descritos pelas fontes consultadas durante a pesquisa.',
     'Observe cada medida com calma e acompanhe a informação correspondente na representação, com atenção ao contexto descrito junto ao dado apresentado.',
@@ -18,6 +26,28 @@ export function allowedGroundedEditorial(pack: EvidencePack): string[] { return 
     'Observe as informações descritas nas fontes, com atenção às medidas e aos respectivos contextos apresentados durante esta explicação dos dados documentados na pesquisa.',
 ]; }
 const lower = (s: string) => s.charAt(0).toLowerCase() + s.slice(1);
+const upper = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+/** Phase 25 mechanism tuples: verbs come from a closed table whose forms the Semantic Engine reads;
+ * subject/object/connector keep the source surface recorded at extraction. */
+export const MECHANISM_VERBS: Record<string, [string, string]> = { FLOW: ['flui', 'fluem'], RISE: ['sobe', 'sobem'], DESCEND: ['desce', 'descem'], ENTER: ['entra', 'entram'], EXIT: ['sai', 'saem'], ROTATE: ['gira', 'giram'], MOVE: ['se move', 'se movem'] };
+/** Mechanism predicate → Semantic Engine predicate used by reconciliation. */
+export const MECHANISM_SEMANTIC: Record<string, string> = { FLOW: 'FLOW', RISE: 'RISE', DESCEND: 'FALL', ENTER: 'ENTER', EXIT: 'EXIT', ROTATE: 'ROTATE', MOVE: 'MOVE' };
+const CAUSE_NOUN: Record<string, string> = { FLOW: 'Esse fluxo', RISE: 'Essa subida', DESCEND: 'Essa descida', ENTER: 'Essa entrada', EXIT: 'Essa saída', ROTATE: 'Esse giro', MOVE: 'Esse movimento' };
+const CONNECTOR: Record<string, string> = { devido: 'devido', gracas: 'graças', 'por causa': 'por causa' };
+function realizeMechanism(f: GroundedFact['canonicalFact']): string | null {
+    const tag = (p: string) => f.qualifiers.find(q => q.startsWith(p))?.slice(p.length) ?? null, det = tag('DET:'), head = normalize(f.subject.split(' ')[0]);
+    const plural = det ? /s$/.test(det) : /[^s]s$/.test(head), article = det && !/^um/.test(det) ? det : det ?? (/as?$/.test(head) ? (plural ? 'as' : 'a') : (plural ? 'os' : 'o'));
+    if (!f.object)
+        return null;
+    if (f.factType === 'DEFINITION' && f.predicate === 'IS_A')
+        return upper(article) + ' ' + f.subject + ' é ' + f.object + '.';
+    if (f.factType === 'PROCESS' && MECHANISM_VERBS[f.predicate])
+        return upper(article) + ' ' + f.subject + ' ' + MECHANISM_VERBS[f.predicate][plural ? 1 : 0] + ' ' + f.object + '.';
+    const cause = tag('CAUSE_OF_'), connector = CONNECTOR[tag('CONNECTOR:') ?? ''];
+    if (f.factType === 'RELATION' && f.predicate === 'CAUSED_BY' && cause && CAUSE_NOUN[cause] && connector)
+        return CAUSE_NOUN[cause] + ' acontece ' + connector + ' ' + f.object + '.';
+    return null;
+}
 /** Closed short paraphrases from grounded tuples; no source prose is copied wholesale. */
 export function realizeGroundedFact(g: GroundedFact): string | null {
     const f = g.canonicalFact, subject = f.subject;
@@ -31,6 +61,8 @@ export function realizeGroundedFact(g: GroundedFact): string | null {
         const phrases: Record<string, string> = { PERMANENT_POPULATION: 'possui população permanente', PERMANENT_SETTLEMENT: 'possui assentamento permanente', TEMPORARY_RESEARCH_STAFF: 'abriga pesquisadores temporariamente', SEASONAL_PRESENCE: 'possui presença sazonal' };
         return f.residency && phrases[f.residency] ? 'A ' + lower(subject) + ' ' + phrases[f.residency] + (f.temporalContext ? ' em ' + f.temporalContext : '') + '.' : null;
     }
+    if (f.qualifiers.includes('MECHANISM_PROSE'))
+        return realizeMechanism(f);
     if (f.factType === 'PROCESS') {
         const prefix = f.qualifiers.includes('DEMO_EXPERIMENT') ? 'No ' + f.temporalContext + ', ' : 'No processo relatado' + (f.temporalContext ? ' no contexto ' + f.temporalContext : '') + ', ', noun = normalize(subject) === 'agua' ? 'a água' : normalize(subject) === 'nivel' ? 'o nível' : subject, object = f.object ?? '';
         const p: Record<string, string> = { EXIT: noun + ' sai de um ' + object, FLOW: noun + ' percorre o ' + object, ENTER: noun + ' entra em um ' + object, INCREASE: noun + ' aumenta no ' + object, OPERATE: noun + ' operam ' + object };
@@ -92,7 +124,7 @@ export function reconcileGrounding(pack: EvidencePack, script: string, sentences
         if (compatible && f) {
             const fact = f.canonicalFact;
             if (fact.factType === 'PROCESS')
-                compatible = c.predicate === fact.predicate && c.status === 'RESOLVED';
+                compatible = c.predicate === (fact.qualifiers.includes('MECHANISM_PROSE') ? MECHANISM_SEMANTIC[fact.predicate] : fact.predicate) && c.status === 'RESOLVED';
             if (fact.factType === 'MEASUREMENT') {
                 const quantities = graph.analysis.quantities.filter(q => c.quantityIds.includes(q.id) && q.dimension === 'TEMPERATURE');
                 compatible = quantities.some(q => q.value === Number(fact.quantity!.originalValue.replace(',', '.')) && fact.quantity!.originalUnit === '°C') && ['MEASURE', 'IS', 'HAS'].includes(c.predicate);
@@ -105,6 +137,22 @@ export function reconcileGrounding(pack: EvidencePack, script: string, sentences
             continue;
         }
         links.push({ claimId: c.id, sentenceId: sentence.id, groundedFactIds: [f.id], evidenceIds: [...f.evidenceIds], sourceIds: [...f.sourceIds], qualifiersPreserved: true, packFingerprint: pack.fingerprint });
+    }
+    // Phase 25: a grounded DEFINITION / RELATION CAUSED_BY sentence may be read by the engine as non-physical
+    // context. It links only when the text is the exact realization and, for a cause, the sentence right
+    // before it realizes the PROCESS fact it explains (so the demonstrative has that antecedent).
+    for (const c of graph.claims.filter(c => !c.requiresVisualProof && c.semanticTags.includes('non_physical'))) {
+        const sentence = sentences.find(s => c.sourceSpan.start >= s.sourceSpan.start && c.sourceSpan.start < s.sourceSpan.end), f = pack.groundedFacts.find(f => sentence?.groundedFactIds.includes(f.id));
+        if (!sentence || sentence.kind !== 'FACT' || !f || !f.usableForPrimaryClaim || realizeGroundedFact(f) !== sentence.text)
+            continue;
+        const kind = c.semanticTags.includes('definition') ? 'definition' as const : 'causal_explanation' as const, fact = f.canonicalFact;
+        let ok = kind === 'definition' ? fact.factType === 'DEFINITION' : fact.factType === 'RELATION' && fact.predicate === 'CAUSED_BY';
+        if (ok && kind === 'causal_explanation') {
+            const i = sentences.indexOf(sentence), prev = sentences.slice(0, i).reverse().find(s => s.kind === 'FACT'), pf = pack.groundedFacts.find(g => prev?.groundedFactIds.includes(g.id))?.canonicalFact;
+            ok = sentences[i - 1] === prev && pf?.factType === 'PROCESS' && normalize(pf.subject) === normalize(fact.subject) && fact.qualifiers.includes('CAUSE_OF_' + pf.predicate);
+        }
+        if (ok)
+            links.push({ claimId: c.id, sentenceId: sentence.id, groundedFactIds: [f.id], evidenceIds: [...f.evidenceIds], sourceIds: [...f.sourceIds], qualifiersPreserved: true, packFingerprint: pack.fingerprint, nonPhysical: kind });
     }
     // A factual sentence cannot disappear into a rhetorical/context classification.
     for (const s of sentences.filter(s => s.kind === 'FACT'))

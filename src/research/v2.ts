@@ -1,4 +1,5 @@
 import { jsonHash } from '../editorial/fingerprint';
+import { extractMechanismEvidence } from './mechanism';
 import { normalize } from '../semantics/normalize';
 import { extractSourceEvidence } from './extractor';
 import { extractEnglish } from './english';
@@ -13,7 +14,9 @@ import type { CanonicalFact, DocumentContextSummary, StructuredRecord, Evidence,
 export const RESEARCH_V2_VERSION = 'research-v2/1.0.0';
 const key = (prefix: string, x: unknown) => prefix + '_' + jsonHash(x).slice(0, 20);
 /** Facts outside the request's fact types/metric are not extracted into a v2 pack. */
-export function relevantFact(f: CanonicalFact, plan: ResearchPlan) { const desired = plan.request.desiredFactTypes, metric = plan.request.constraints?.metric; if (f.factType === 'MEASUREMENT')
+export function relevantFact(f: CanonicalFact, plan: ResearchPlan) { const desired = plan.request.desiredFactTypes, metric = plan.request.constraints?.metric; if (plan.request.researchGoal === 'PROCESS' && f.qualifiers.includes('MECHANISM_PROSE'))
+    return true; // Phase 25: mechanism facts about the requested subject are relevant to a PROCESS route; readiness still requires every desired type.
+ if (f.factType === 'MEASUREMENT')
     return desired.includes('MEASUREMENT') && (!metric || metric === 'TEMPERATURE'); if (f.factType === 'RESIDENCY')
     return desired.includes('RESIDENCY'); if (f.factType === 'QUANTITY')
     return desired.includes('QUANTITY') && (!metric || metric === 'POPULATION'); return desired.includes(f.factType); }
@@ -29,6 +32,8 @@ export function extractSourceEvidenceV2(s: SourceDocument, plan: ResearchPlan, m
         return { evidence: [] as Evidence[], candidates: [] as FactCandidate[], structures: [] as StructuredSummary[], truncated: 0, contexts: [] as DocumentContextSummary[], records: [] as StructuredRecord[] };
     const v3 = (policy.researchVersion ?? 1) >= 3, contexts: DocumentContextSummary[] = [], records: Omit<StructuredRecord, 'evidenceIds'>[] = [];
     const prose = s.language === 'en' ? extractEnglish(s, policy, Number.MAX_SAFE_INTEGER, policy.researchVersion === 4 ? 4 : v3 ? 3 : 2) : extractSourceEvidence(s, { ...policy, researchVersion: 1 }, Number.MAX_SAFE_INTEGER);
+    // Phase 25: PROCESS routes also read literal mechanism clauses from documents about the requested subject.
+    if (plan.request.researchGoal === 'PROCESS') { const m = extractMechanismEvidence(s, plan); prose.evidence.push(...m.evidence); prose.candidates.push(...m.candidates); }
     if (v3 && s.contentType === 'text/html') {
         // Phase 22: DocumentContext + context-aware tables + semi-structured records.
         const x = structuredV3(s, plan, parseHtmlStructures(s.content, host));

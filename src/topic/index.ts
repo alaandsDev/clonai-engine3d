@@ -5,3 +5,4 @@ export * from './claims';
 export * from './routing';
 export * from './plan';
 export * from './integration';
+export * from './subject';

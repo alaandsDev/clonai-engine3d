@@ -55,7 +55,9 @@
     "research:v2:audit": "tsx cli/research-v2-audit.ts",
     "check:research-v3": "tsx --test tests/research-v3.test.ts",
     "check:research-v4": "tsx --test tests/research-v4.test.ts",
-    "check:topic-intelligence": "tsx --test tests/topic-intelligence.test.ts"
+    "check:topic-intelligence": "tsx --test tests/topic-intelligence.test.ts",
+    "check:vertical-slice": "tsx --test tests/vertical-slice.test.ts",
+    "vertical:run": "tsx cli/vertical-slice.ts"
   },
   "dependencies": {
     "@react-three/fiber": "8.18.0",

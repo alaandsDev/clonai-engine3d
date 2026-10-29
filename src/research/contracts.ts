@@ -186,7 +186,7 @@ export interface Evidence {
     supports: CanonicalFact;
     extractionConfidence: 'HIGH' | 'MEDIUM';
     truthStatus: 'EXTRACTED';
-    extractionMethod: 'LITERAL_PT_V1' | 'TABLE_PT_V1' | 'LITERAL_EN_V1' | 'LITERAL_EN_V2' | 'TABLE_HTML_V2' | 'LIST_HTML_V2' | 'DEFINITION_HTML_V2' | 'KEY_VALUE_HTML_V2' | 'DATASET_V2' | 'RECORD_HTML_V3';
+    extractionMethod: 'MECHANISM_PT_V1' | 'LITERAL_PT_V1' | 'TABLE_PT_V1' | 'LITERAL_EN_V1' | 'LITERAL_EN_V2' | 'TABLE_HTML_V2' | 'LIST_HTML_V2' | 'DEFINITION_HTML_V2' | 'KEY_VALUE_HTML_V2' | 'DATASET_V2' | 'RECORD_HTML_V3';
     evidenceLanguage?: 'en';
     contextSpans?: SourceSpan[];
     contentHash: string;
@@ -379,6 +379,8 @@ export interface ClaimEvidenceLink {
     sourceIds: string[];
     qualifiersPreserved: boolean;
     packFingerprint: string;
+    /** Phase 25: a grounded non-physical explanation (definition / abstract cause); never visual proof. */
+    nonPhysical?: 'definition' | 'causal_explanation';
 }
 export interface GroundedSentence {
     id: string;

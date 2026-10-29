@@ -6,7 +6,9 @@ import type {ClaimFamily,EpistemicMode,TopicPlan} from './contracts';
 import {assertTopicPlan} from './plan';
 /** Opt-in adapters. Research/Writer behaviour is unchanged unless a caller
  * explicitly passes a verified TopicPlan through these functions. */
-export function buildRoutedResearchRequest(plan:TopicPlan,o:{id:string;evaluationDate?:string;maxSources?:number;maxEvidenceItems?:number}):ResearchRequest|null{
+/** Capacity knobs (source sizes) are operational bounds validated by Research; they never change evidence admission or quorum. */
+export interface RoutedCapacity {maxSourceBytes?:number;maxTotalSourceBytes?:number;maxNormalizedCharacters?:number;allowEnglishExtraction?:boolean}
+export function buildRoutedResearchRequest(plan:TopicPlan,o:{id:string;evaluationDate?:string;maxSources?:number;maxEvidenceItems?:number;capacity?:RoutedCapacity}):ResearchRequest|null{
  assertTopicPlan(plan);const r=plan.researchRoute;
  if(r.execute==='NONE')return null;
  if(r.blockingRules.includes('RANKING_METRIC_UNSUPPORTED_BY_RESEARCH'))throw Error('TOPIC_ROUTE_UNSUPPORTED ranking metric has no Research model');
@@ -17,7 +19,7 @@ export function buildRoutedResearchRequest(plan:TopicPlan,o:{id:string;evaluatio
   ...(r.constraints&&Object.keys(r.constraints).length?{constraints:r.constraints}:{}),
   sourcePolicy:{minIndependentSources:r.quorum.minIndependentSources,minPrimaryQuality:r.quorum.minPrimaryQuality,researchVersion:4,
    ...(quorum.length?{factTypeQuorum:Object.fromEntries(quorum.map(([t,n])=>[t,{minIndependentOrigins:n}]))}:{}),
-   ...(o.evaluationDate?{evaluationDate:o.evaluationDate}:{})},
+   ...(o.evaluationDate?{evaluationDate:o.evaluationDate}:{}),...(o.capacity??{})},
   ...(o.maxSources?{maxSources:o.maxSources}:{}),...(o.maxEvidenceItems?{maxEvidenceItems:o.maxEvidenceItems}:{})};
  validateResearchRequest(request);
  return request;
