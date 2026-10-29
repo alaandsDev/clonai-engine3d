@@ -1,0 +1,63 @@
+{
+ "note": "Phase23 operator request and recorded outcome summary (no snapshots, no facts). Used offline to check that Topic routing never relaxes the Cold safeguards.",
+ "request": {
+  "version": 1,
+  "id": "real-cold-places-v4",
+  "topic": "Os cinco lugares mais frios onde pessoas vivem permanentemente.",
+  "language": "pt-BR",
+  "researchGoal": "RANKING",
+  "desiredFactTypes": [
+   "MEASUREMENT",
+   "RESIDENCY",
+   "RANKING"
+  ],
+  "constraints": {
+   "metric": "TEMPERATURE",
+   "qualifier": "MINIMUM_RECORDED",
+   "residencyCriterion": "PERMANENT_POPULATION",
+   "rankingCount": 5
+  },
+  "sourcePolicy": {
+   "minIndependentSources": 2,
+   "minPrimaryQuality": "MEDIUM",
+   "allowEnglishExtraction": true,
+   "maxSourceBytes": 2097152,
+   "maxTotalSourceBytes": 33554432,
+   "maxNormalizedCharacters": 524288,
+   "researchVersion": 4,
+   "factTypeQuorum": {
+    "MEASUREMENT": {
+     "minIndependentOrigins": 2,
+     "singleOriginAuthority": {
+      "sourceTypes": [
+       "PRIMARY_OFFICIAL",
+       "PRIMARY_DATASET"
+      ],
+      "minGrade": "HIGH"
+     }
+    },
+    "RESIDENCY": {
+     "minIndependentOrigins": 2,
+     "singleOriginAuthority": {
+      "sourceTypes": [
+       "PRIMARY_OFFICIAL",
+       "INSTITUTIONAL"
+      ],
+      "minGrade": "HIGH"
+     }
+    }
+   },
+   "evaluationDate": "2026-10-28",
+   "residencyMaxAgeYears": 15,
+   "observationSitePolicy": "SOURCED_OBSERVATION_SITE"
+  },
+  "maxSources": 32,
+  "maxEvidenceItems": 256
+ },
+ "outcome": {
+  "resultState": "REAL_RESEARCH_PARTIAL",
+  "writerStatus": "RESEARCH_INCOMPLETE",
+  "rankingStatus": "RANKING_INCOMPLETE",
+  "productionEligibility": "RESEARCH_INCOMPLETE"
+ }
+}
