@@ -6,6 +6,7 @@ import { attachedCitations, documentSubject, hostOf, interpretGrid, interpretLis
 import { buildSourceGraph, resolveAliases, sourceLocators, withFactRelations } from './origins';
 import { structuredV3 } from './v3-extract';
 import { factWindowNearCopy } from './similarity';
+import {evidenceAllowedV4, separateMeasurementContexts} from './v4/semantics';
 import type { CanonicalFact, DocumentContextSummary, StructuredRecord, Evidence, EvidenceQualityAssessment, FactCandidate, FactConflict, FactTypeQuorum, GroundedFact, OriginRelation, ResearchPlan, ResearchPolicy, ResearchV2Section, SourceDocument, SourceQualityAssessment, StructuredSummary } from './contracts';
 // Phase 21 research model (opt-in via sourcePolicy.researchVersion = 2). Reuses the Phase 19 contracts and
 // policy vocabulary; differences from v1 are documented in src/research/README.md.
@@ -22,12 +23,12 @@ function record(s: SourceDocument, f: StructuredFact): { evidence: Evidence; can
     const evidence = { ...raw, fingerprint: jsonHash(raw) }, c = { id: key('FC', { fact: f.fact, evidence: evidence.id }), canonicalFact: structuredClone(f.fact), evidenceIds: [evidence.id], extractionConfidence: 'HIGH' as const, status: 'EXTRACTED' as const };
     return { evidence, candidate: { ...c, fingerprint: jsonHash(c) } };
 }
-export function extractSourceEvidenceV2(s: SourceDocument, plan: ResearchPlan, maxItems: number) {
+export function extractSourceEvidenceV2(s: SourceDocument, plan: ResearchPlan, maxItems: number,allSources:SourceDocument[]=[s]) {
     const policy = plan.policy, structures: Omit<StructuredSummary, 'evidenceIds'>[] = [], structuredFacts: StructuredFact[] = [], host = hostOf(s.canonicalLocator);
     if (s.language !== 'en' && s.language !== 'pt-BR')
         return { evidence: [] as Evidence[], candidates: [] as FactCandidate[], structures: [] as StructuredSummary[], truncated: 0, contexts: [] as DocumentContextSummary[], records: [] as StructuredRecord[] };
-    const v3 = policy.researchVersion === 3, contexts: DocumentContextSummary[] = [], records: Omit<StructuredRecord, 'evidenceIds'>[] = [];
-    const prose = s.language === 'en' ? extractEnglish(s, policy, Number.MAX_SAFE_INTEGER, v3 ? 3 : 2) : extractSourceEvidence(s, { ...policy, researchVersion: 1 }, Number.MAX_SAFE_INTEGER);
+    const v3 = (policy.researchVersion ?? 1) >= 3, contexts: DocumentContextSummary[] = [], records: Omit<StructuredRecord, 'evidenceIds'>[] = [];
+    const prose = s.language === 'en' ? extractEnglish(s, policy, Number.MAX_SAFE_INTEGER, policy.researchVersion === 4 ? 4 : v3 ? 3 : 2) : extractSourceEvidence(s, { ...policy, researchVersion: 1 }, Number.MAX_SAFE_INTEGER);
     if (v3 && s.contentType === 'text/html') {
         // Phase 22: DocumentContext + context-aware tables + semi-structured records.
         const x = structuredV3(s, plan, parseHtmlStructures(s.content, host));
@@ -67,7 +68,7 @@ export function extractSourceEvidenceV2(s: SourceDocument, plan: ResearchPlan, m
         const { fingerprint, ...raw } = e, withCitations = { ...raw, citations: attachedCitations(s.content, e.sourceSpan.start, e.sourceSpan.end, host) };
         all.push({ evidence: { ...withCitations, fingerprint: jsonHash(withCitations) }, candidate, structuredRef: null });
     }
-    const unique = all.filter((x, i) => all.findIndex(y => y.evidence.id === x.evidence.id) === i).sort((a, b) => a.evidence.sourceSpan.start - b.evidence.sourceSpan.start || a.evidence.id.localeCompare(b.evidence.id, 'en'));
+    const unique = all.filter((x, i) => all.findIndex(y => y.evidence.id === x.evidence.id) === i).filter(x => policy.researchVersion !== 4 || evidenceAllowedV4(x.evidence,s,allSources)).sort((a, b) => a.evidence.sourceSpan.start - b.evidence.sourceSpan.start || a.evidence.id.localeCompare(b.evidence.id, 'en'));
     const kept = unique.slice(0, maxItems);
     return { evidence: kept.map(x => x.evidence).sort((a, b) => a.id.localeCompare(b.id, 'en')), candidates: kept.map(x => x.candidate).sort((a, b) => a.id.localeCompare(b.id, 'en')), structures: structures.map(x => ({ ...x, evidenceIds: kept.filter(k => k.structuredRef === x.kind + ':' + x.index).map(k => k.evidence.id).sort() })), truncated: unique.length - kept.length, contexts, records: records.map((r, i) => ({ ...r, evidenceIds: kept.filter(k => k.structuredRef === 'RECORD:' + i).map(k => k.evidence.id).sort() })) };
 }
@@ -93,12 +94,14 @@ const CONTEXT_EXCLUSIVE = ['MINIMUM_RECORDED', 'SURFACE_TEMPERATURE_MINIMUM', 'S
 const year = (t: string | null | undefined) => t?.match(/\b(1[6-9]\d\d|20\d\d)\b/)?.[1] ?? null;
 export function identityV2(f: CanonicalFact, canonical: Map<string, string>, withValue = true) { const subject = canonical.get(normalize(f.subject)) ?? f.subject; return { factType: f.factType, subject: normalize(subject), ...(f.subjectKind ? { subjectKind: f.subjectKind } : {}), predicate: f.predicate, object: f.object, metric: f.metric, residency: f.residency, qualifiers: f.qualifiers.filter(q => !EPISTEMIC.has(q)).sort(), quantity: f.quantity ? (withValue ? { value: f.quantity.normalizedValue, unit: f.quantity.normalizedUnit, approximation: f.quantity.approximation } : { unit: f.quantity.normalizedUnit, approximation: f.quantity.approximation }) : null, census: f.factType === 'QUANTITY' ? year(f.temporalContext) : null }; }
 function conflict(type: FactConflict['conflictType'], a: FactCandidate[], b: FactCandidate[], factKey: string, reason: string): FactConflict { const raw = { factKey, evidenceA: [...new Set(a.flatMap(c => c.evidenceIds))].sort(), evidenceB: [...new Set(b.flatMap(c => c.evidenceIds))].sort(), factCandidateIds: [...new Set([...a, ...b].map(c => c.id))].sort(), conflictType: type, resolutionStatus: 'UNRESOLVED' as const, reason }; return { id: 'CONFLICT_' + jsonHash(raw).slice(0, 20), ...raw }; }
-export function detectConflictsV2(candidates: FactCandidate[], evidence: Map<string, Evidence>, groupOf: Map<string, string>, canonical: Map<string, string>, contradicted: [string, string][]): FactConflict[] {
+export function detectConflictsV2(candidates: FactCandidate[], evidence: Map<string, Evidence>, groupOf: Map<string, string>, canonical: Map<string, string>, contradicted: [string, string][], version=2): FactConflict[] {
     const out: FactConflict[] = [], cs = [...candidates].sort((a, b) => a.id.localeCompare(b.id, 'en')), group = (c: FactCandidate) => groupOf.get(evidence.get(c.evidenceIds[0])!.sourceId);
     for (let i = 0; i < cs.length; i++)
         for (let j = i + 1; j < cs.length; j++) {
             const a = cs[i], b = cs[j], fa = a.canonicalFact, fb = b.canonicalFact, ia = identityV2(fa, canonical), ib = identityV2(fb, canonical);
             if (ia.subject !== ib.subject || fa.factType !== fb.factType)
+                continue;
+            if (version === 4 && separateMeasurementContexts(fa, fb))
                 continue;
             if (fa.quantity && fb.quantity && jsonHash(identityV2(fa, canonical, false)) === jsonHash(identityV2(fb, canonical, false)) && fa.quantity.normalizedValue !== fb.quantity.normalizedValue)
                 out.push(conflict(group(a) === group(b) ? 'SOURCE_ORIGIN_CONFLICT' : 'VALUE_CONFLICT', [a], [b], jsonHash(identityV2(fa, canonical, false)), group(a) === group(b) ? 'One origin group reports two values for the same entity/metric/qualifiers' : 'Same entity, metric and qualifiers with different values; unresolved'));
@@ -126,8 +129,10 @@ export function quorumFor(policy: ResearchPolicy, type: string): FactTypeQuorum 
 /** Corroboration counts independent origin roots, not pages: derived evidence (citing or reporting another supporting session source) adds no origin; shared citations merge roots. */
 export function groundFactsV2(candidates: FactCandidate[], evidence: Evidence[], sources: SourceDocument[], assessments: SourceQualityAssessment[], conflicts: FactConflict[], policy: ResearchPolicy, groupOf: Map<string, string>, cites: Map<string, Set<string>>, canonical: Map<string, string>, quality: Map<string, EvidenceQualityAssessment>): { facts: GroundedFact[]; relations: Omit<OriginRelation, 'id'>[] } {
     const byEvidence = new Map(evidence.map(e => [e.id, e])), bySource = new Map(sources.map(s => [s.id, s])), grade = new Map(assessments.map(a => [a.sourceId, a.grade])), grouped = new Map<string, FactCandidate[]>(), relations: Omit<OriginRelation, 'id'>[] = [];
+    const windows=new Map<string,Set<string>>();
+    if(policy.researchVersion===4)for(const c of candidates){const k=jsonHash(identityV2(c.canonicalFact,canonical)),period=c.canonicalFact.observationPeriod;if(period)windows.set(k,(windows.get(k)??new Set()).add(period));}
     for (const c of [...candidates].sort((a, b) => a.id.localeCompare(b.id, 'en'))) {
-        const k = jsonHash(identityV2(c.canonicalFact, canonical));
+        const tuple=identityV2(c.canonicalFact,canonical),baseKey=jsonHash(tuple),k=policy.researchVersion===4&&(windows.get(baseKey)?.size??0)>1?jsonHash({...tuple,observationPeriod:c.canonicalFact.observationPeriod??null}):baseKey;
         grouped.set(k, [...(grouped.get(k) ?? []), c]);
     }
     const facts = [...grouped.entries()].map(([k, cs]) => {
@@ -163,7 +168,7 @@ export function groundFactsV2(candidates: FactCandidate[], evidence: Evidence[],
                 else
                     owner.set(token, e.id);
             }
-        if (policy.researchVersion === 3)
+        if ((policy.researchVersion ?? 1) >= 3)
             for (let i = 0; i < roots.length; i++)
                 for (let j = i + 1; j < roots.length; j++) {
                     const a = roots[i], b = roots[j], near = find(a.id) !== find(b.id) ? factWindowNearCopy(a, b) : { similar: false, score: 0 };
@@ -205,7 +210,8 @@ export function groundFactsV2(candidates: FactCandidate[], evidence: Evidence[],
 }
 /** Pure v2 core used by buildEvidencePack: extraction, SourceGraph, aliases, evidence quality, conflicts and grounding. */
 export function researchV2(plan: ResearchPlan, sources: SourceDocument[], assessments: SourceQualityAssessment[], accepted: Set<string>, maxEvidence: number) {
-    const diagnostics: ResearchV2Section['diagnostics'] = [], extracted = sources.filter(s => accepted.has(s.id)).map(s => ({ s, x: extractSourceEvidenceV2(s, plan, maxEvidence) }));
+    const diagnostics: ResearchV2Section['diagnostics'] = [], extracted = sources.filter(s => accepted.has(s.id)).map(s => ({ s, x: extractSourceEvidenceV2(s, plan, maxEvidence,sources) }));
+    if(plan.policy.researchVersion===4)for(const {s,x} of extracted)if(['text/csv','text/tab-separated-values'].includes(s.contentType)&&!x.evidence.length)diagnostics.push({code:'EVIDENCE_EXTRACTION_GAP',subject:s.metadata.datasetTarget?.name??null,detail:s.id+' DATASET_ENTITY_MATCH_GAP: no row with validated identifier/administrative context; name-only rows remain candidates'});
     for (const { s, x } of extracted)
         if (x.truncated)
             diagnostics.push({ code: 'EVIDENCE_BUDGET_TRUNCATED', subject: null, detail: s.id + ' dropped ' + x.truncated + ' items beyond the per-source evidence budget' });
@@ -219,10 +225,10 @@ export function researchV2(plan: ResearchPlan, sources: SourceDocument[], assess
     if (total > kept.length)
         diagnostics.push({ code: 'EVIDENCE_BUDGET_TRUNCATED', subject: null, detail: 'Pack kept ' + kept.length + ' of ' + total + ' evidence items (round-robin by source)' });
     const keptIds = new Set(kept.map(e => e.id)), candidates = extracted.flatMap(({ x }) => x.candidates).filter(c => c.evidenceIds.every(id => keptIds.has(id)));
-    const built = buildSourceGraph(sources, assessments, kept), subjects = [...new Set(candidates.map(c => c.canonicalFact.subject))], alias = resolveAliases(sources.filter(s => accepted.has(s.id)), subjects, plan.policy.researchVersion === 3 ? 3 : 2);
+    const built = buildSourceGraph(sources, assessments, kept), subjects = [...new Set(candidates.map(c => c.canonicalFact.subject))], alias = resolveAliases(sources.filter(s => accepted.has(s.id)), subjects, (plan.policy.researchVersion ?? 1) >= 3 ? 3 : 2);
     const evidence = kept.map(e => { const { fingerprint, ...raw } = e, withGroup = { ...raw, originGroupId: built.groupOf.get(e.sourceId)! }; return { ...withGroup, fingerprint: jsonHash(withGroup) }; }).sort((a, b) => a.id.localeCompare(b.id, 'en'));
     const byId = new Map(evidence.map(e => [e.id, e])), assessmentsE = evidence.map(assessEvidence), quality = new Map(assessmentsE.map(a => [a.evidenceId, a]));
-    const conflicts = detectConflictsV2(candidates, byId, built.groupOf, alias.canonical, alias.contradicted), grounded = groundFactsV2(candidates, evidence, sources, assessments, conflicts, plan.policy, built.groupOf, built.cites, alias.canonical, quality);
+    const conflicts = detectConflictsV2(candidates, byId, built.groupOf, alias.canonical, alias.contradicted, plan.policy.researchVersion), grounded = groundFactsV2(candidates, evidence, sources, assessments, conflicts, plan.policy, built.groupOf, built.cites, alias.canonical, quality);
     for (const f of grounded.facts) {
         if (f.status === 'INSUFFICIENT')
             diagnostics.push({ code: 'CORROBORATION_GAP', subject: f.canonicalFact.subject, detail: f.id + ' ' + (f.origins?.admission ?? '') });

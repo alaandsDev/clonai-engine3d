@@ -18,7 +18,7 @@ export interface ResearchPolicy {
     evaluationDate: string | null;
     allowEnglishExtraction?: boolean;
     /** Opt-in Phase 21 model: structured extraction, SourceGraph origin groups, corroboration/conflicts v2. Absent = Phase 19/20 behaviour. */
-    researchVersion?: 1 | 2 | 3;
+    researchVersion?: 1 | 2 | 3 | 4;
     /** Per fact type admission rule (v2 only). Absent = minIndependentSources for every type. */
     factTypeQuorum?: Partial<Record<'MEASUREMENT' | 'RESIDENCY' | 'QUANTITY', FactTypeQuorum>>;
     /** Residency currentness (v2): dated residency older than this, relative to evaluationDate, is not current. */
@@ -83,6 +83,9 @@ export interface SourceInput {
     content: string;
     contentHash: string;
     metadata: {
+        /** v4 discovery metadata constrains lineage/matching, never supplies factual values. */
+        dataset?: import('./v4/contracts').DatasetIdentity;
+        datasetTarget?: {name:string;identifier:string|null;admin:string|null;proof:{sourceId:string;span:{start:number;end:number;text:string}}[]};
         methodology?: string;
         directEvidence?: boolean;
         /** v3 bounded large-dataset ingestion: the snapshot keeps header + selected rows; the full payload is described here. */
@@ -288,6 +291,8 @@ export interface EvidencePack {
     v2?: ResearchV2Section;
     /** Present only for researchVersion 3 packs. */
     v3?: ResearchV3Section;
+    /** Opt-in Phase 23 fact-centric requirements and acquisition planning. */
+    v4?: import('./v4/contracts').ResearchV4Section;
     fingerprint: string;
 }
 export type OriginRelationType = 'PRIMARY_ORIGIN' | 'DERIVED_FROM' | 'CITES' | 'REPORTS' | 'MIRRORS' | 'NEAR_COPY' | 'SAME_PUBLISHER' | 'UNKNOWN_RELATION';

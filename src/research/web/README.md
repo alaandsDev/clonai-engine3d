@@ -49,3 +49,19 @@ npx tsx cli/research-v3-audit.ts out/engine3d/phase22
 ```
 
 `saveResearchArtifacts` writes 13 v3 JSON views and nine escaped Markdown review views. The audit combines both benchmark reviews and writes comparison, strict gates, replay, anti-hardcode, security, timing and registry/video integrity reports. Real benchmarks are live observations; cached replay and old-snapshot development observations are labelled separately. Research readiness, writer realization and rendering remain distinct gates.
+
+# Web research v4 (Phase 23)
+
+Use `researchVersion: 4` plus `web.v4`. A bounded reference bootstrap creates candidates; acquisition then follows explicit fact gaps and requirements. Provider capabilities select orthogonal ecosystem/query families. Gap, strategy, family, domain and global budgets coexist. Failed identical acquisitions are remembered across facts so a common blocked original cannot consume every gap's budget. Closed gaps stop. Original source/citation/publisher/near-copy chains still determine independent roots.
+
+DataCite Public API and a configurable public CKAN endpoint discover dataset resources and lineage. Metadata is discovery only, never evidence. Existing MediaWiki/Wikidata/Crossref adapters are reused. V4 disables OpenAlex because its current policy requires keys and usage pricing; no API credentials or paid fallback are used. Every textual resource uses the existing secure fetcher. No PDF/OCR, JS renderer or translation service was added.
+
+Session v4 records immutable acquisition intents and derives attempt counters from the actual before/after source subsets. Replay reconstructs gaps, requirements, strategies, families, attempts, pool, tasks, citations, datasets and yield; it fails on content/fingerprint/source-chain mismatch. Metrics distinguish live-bootstrap gains from exact same-ID transitions against the previous phase. Scope remains SESSION_CANDIDATES.
+
+```powershell
+npm run research:web -- examples/research/web-v4-cold-request.json out/engine3d/phase23
+npm run research:web -- examples/research/web-v4-population-request.json out/engine3d/phase23
+npx tsx cli/research-v4-audit.ts
+```
+
+The output writer preserves normal raw/normalized snapshots and pack artifacts, plus gap/requirement/strategy/family/attempt/provider/dataset/citation/origin/fitness/eligibility views and nine escaped review views. The audit disables network entry points, compares canonical transitions and checks registry, historical videos, anti-hardcode and regressions. Artifacts under `out/` are local and ignored; no render or publication is automatic.

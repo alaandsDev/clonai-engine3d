@@ -35,11 +35,11 @@ export function validateResearchRequest(r: ResearchRequest) {
         for (const k of Object.keys(p))
             if (!['minIndependentSources', 'minPrimaryQuality', 'allowFahrenheitConversion', 'allowEnglishExtraction', 'temporalComparison', 'maxSourceBytes', 'maxTotalSourceBytes', 'maxNormalizedCharacters', 'evaluationDate', 'researchVersion', 'factTypeQuorum', 'residencyMaxAgeYears', 'observationSitePolicy'].includes(k))
                 throw Error('RESEARCH_POLICY unknown ' + k);
-        if (p.researchVersion !== undefined && p.researchVersion !== 1 && p.researchVersion !== 2 && p.researchVersion !== 3)
+        if (p.researchVersion !== undefined && ![1, 2, 3, 4].includes(p.researchVersion))
             throw Error('RESEARCH_POLICY version');
         if ((p.factTypeQuorum !== undefined || p.residencyMaxAgeYears !== undefined) && (p.researchVersion ?? 1) < 2)
             throw Error('RESEARCH_POLICY v2 fields require researchVersion 2');
-        if (p.observationSitePolicy !== undefined && (p.researchVersion !== 3 || !['SAME_ENTITY_ONLY', 'SOURCED_OBSERVATION_SITE'].includes(p.observationSitePolicy)))
+        if (p.observationSitePolicy !== undefined && ((p.researchVersion ?? 1) < 3 || !['SAME_ENTITY_ONLY', 'SOURCED_OBSERVATION_SITE'].includes(p.observationSitePolicy)))
             throw Error('RESEARCH_POLICY observationSitePolicy requires researchVersion 3');
         if (p.residencyMaxAgeYears !== undefined && (!Number.isInteger(p.residencyMaxAgeYears) || p.residencyMaxAgeYears < 1 || p.residencyMaxAgeYears > 100))
             throw Error('RESEARCH_POLICY residency age');

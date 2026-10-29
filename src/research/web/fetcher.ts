@@ -55,7 +55,7 @@ export class WebSourceProvider implements SourceProvider {
     constructor(readonly client: SecureHttpClient, readonly cache?: SnapshotCache) { }
     receive(_plan: ResearchPlan): SourcePack { return { version: 1, id: 'web-acquired-snapshots', fixture: false, labels: ['REAL_WEB_SNAPSHOTS', 'SESSION_CANDIDATES_ONLY'], sources: structuredClone(this.sources) }; }
     /** `discovery` selects the Phase 21 intake: post-fetch classification, discovery provenance and a per-source admission check. */
-    async fetch(candidate: CandidateSource, plan: ResearchPlan, discovery?: { via: DiscoveryVia; referenceIds: string[]; strategy: string; independence?: string; version?: 3; dataset?: { maxBytes: number; terms: string[] } }): Promise<{
+    async fetch(candidate: CandidateSource, plan: ResearchPlan, discovery?: { via: DiscoveryVia; referenceIds: string[]; strategy: string; independence?: string; version?: 3 | 4; datasetIdentity?: SourceInput['metadata']['dataset']; datasetTarget?: SourceInput['metadata']['datasetTarget']; dataset?: { maxBytes: number; terms: string[] } }): Promise<{
         attempt: FetchAttempt;
         source: SourceInput | null;
     }> {
@@ -104,7 +104,7 @@ export class WebSourceProvider implements SourceProvider {
             await this.cache?.put(snapshot);
             // Title/language originate in the fetched document, never from a search excerpt.
             const titleRaw = content.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i)?.[1], title = titleRaw?.replace(/<[^>]*>/g, '').trim() || new URL(fetched.url).pathname;
-            const lang = content.match(/<html\b[^>]*\blang=["']([^"']+)/i)?.[1]?.toLowerCase() ?? r.headers['content-language']?.toLowerCase(), language = lang?.startsWith('en') ? 'en' : lang?.startsWith('pt') ? 'pt-BR' : discovery && !lang ? detectLanguage(content) : discovery?.version === 3 && lang && /^[a-z]{2,3}(?:-|$)/.test(lang) ? lang.slice(0, lang.indexOf('-') > 0 ? lang.indexOf('-') : undefined) : 'und';
+            const lang = content.match(/<html\b[^>]*\blang=["']([^"']+)/i)?.[1]?.toLowerCase() ?? r.headers['content-language']?.toLowerCase(), language = lang?.startsWith('en') ? 'en' : lang?.startsWith('pt') ? 'pt-BR' : discovery && !lang ? detectLanguage(content) : (discovery?.version ?? 0) >= 3 && lang && /^[a-z]{2,3}(?:-|$)/.test(lang) ? lang.slice(0, lang.indexOf('-') > 0 ? lang.indexOf('-') : undefined) : 'und';
             const domain = new URL(fetched.url).hostname, hint = this.client.config.officialDomainHints.find(h => hostMatches(domain, h.domain));
             const cited = [...content.matchAll(/\b(?:rel=["'](?:[^"']*\s)?(?:mw:ExtLink|external)[^"']*["'][^>]*href|href)=["'](https?:\/\/[^"'<> ]+)/gi)].map(m => { try {
                 return canonicalUrl(m[1].replace(/&amp;/g, '&'));
@@ -113,9 +113,9 @@ export class WebSourceProvider implements SourceProvider {
                 return null;
             } }).filter((x): x is string => Boolean(x)).slice(0, 64);
             const classified = discovery ? classifySource(content, fetched.url, hint) : null;
-            const source: SourceInput = { id: 'WEB_' + jsonHash({ url: fetched.url, hash }).slice(0, 20), provider: 'WEB_SEARCH', sourceType: classified?.sourceType ?? hint?.sourceType ?? (hostMatches(domain, 'wikipedia.org') ? 'REFERENCE' : 'OTHER'), title, publisher: domain, canonicalLocator: fetched.url, language, contentType: mime === 'text/csv' ? (discovery ? 'text/csv' : 'text/plain') : mime as SourceInput['contentType'], content, contentHash: hash, retrievedAt: raw.fetchedAt, fixture: false, metadata: { directEvidence: discovery ? DIRECT_V2.test(content) : /\d\s*(?:°|&deg;)/.test(content), ...(partial ? { partial } : {}) }, provenance: { originKey: domain, discovery: { queryIds: candidate.queryIds, requestedUrl: candidate.canonicalUrl, finalUrl: fetched.url, ...(discovery ? { via: discovery.via, referenceIds: discovery.referenceIds, strategy: discovery.strategy, ...(discovery.independence ? { independence: discovery.independence } : {}) } : {}) }, sharedOriginKeys: cited.map(u => 'citation:' + u), description: 'Public HTTP snapshot; source class ' + (classified ? classified.reason : hint ? 'explicit configured domain hint: ' + hint.reason : 'heuristic reference/other') + '; outbound references are conservative reported-origin hints, not verified independent evidence' } };
+            const source: SourceInput = { id: 'WEB_' + jsonHash({ url: fetched.url, hash }).slice(0, 20), provider: 'WEB_SEARCH', sourceType: classified?.sourceType ?? hint?.sourceType ?? (hostMatches(domain, 'wikipedia.org') ? 'REFERENCE' : 'OTHER'), title, publisher: domain, canonicalLocator: fetched.url, language, contentType: mime === 'text/csv' ? (discovery ? 'text/csv' : 'text/plain') : mime as SourceInput['contentType'], content, contentHash: hash, retrievedAt: raw.fetchedAt, fixture: false, metadata: { directEvidence: discovery ? (DIRECT_V2.test(content) || discovery.version === 4 && /usual residents|permanent civilian residents|civilian population/i.test(content)) : /\d\s*(?:°|&deg;)/.test(content), ...(partial ? { partial } : {}), ...(discovery?.version===4&&discovery.datasetIdentity?{dataset:discovery.datasetIdentity}:{}), ...(discovery?.version===4&&discovery.datasetTarget?{datasetTarget:discovery.datasetTarget}:{}) }, provenance: { originKey: domain, discovery: { queryIds: candidate.queryIds, requestedUrl: candidate.canonicalUrl, finalUrl: fetched.url, ...(discovery ? { via: discovery.via, referenceIds: discovery.referenceIds, strategy: discovery.strategy, ...(discovery.independence ? { independence: discovery.independence } : {}) } : {}) }, sharedOriginKeys: cited.map(u => 'citation:' + u), description: 'Public HTTP snapshot; source class ' + (classified ? classified.reason : hint ? 'explicit configured domain hint: ' + hint.reason : 'heuristic reference/other') + '; outbound references are conservative reported-origin hints, not verified independent evidence' } };
             const doc = normalizedSource(source, plan.policy), assessment = assessSource(doc, plan.policy);
-            if (discovery?.version === 3 && mime === 'text/html') {
+            if ((discovery?.version ?? 0) >= 3 && mime === 'text/html') {
                 const js = scriptDiagnostic(content, doc.normalized.text);
                 if (js)
                     throw Error('CONTENT_UNAVAILABLE ' + js);
@@ -123,12 +123,12 @@ export class WebSourceProvider implements SourceProvider {
             if (!doc.normalized.text.trim() || /^(?:enable javascript|just a moment|access denied)/i.test(doc.normalized.text.trim()))
                 throw Error('CONTENT_UNAVAILABLE client-rendered/challenge');
             // v3 keeps unsupported-language snapshots in the pack (assessed REJECT, never extracted) so the SourceGraph shows them.
-            const preserved = discovery?.version === 3 && !assessment.accepted && assessment.reasons.every(x => x === 'LANGUAGE_UNSUPPORTED_FOR_EXTRACTION');
+            const preserved = (discovery?.version ?? 0) >= 3 && !assessment.accepted && assessment.reasons.every(x => x === 'LANGUAGE_UNSUPPORTED_FOR_EXTRACTION');
             if (!assessment.accepted && !preserved)
                 throw Error('CONTENT_UNAVAILABLE quality ' + assessment.reasons.join(','));
             // V3 can reach the same final snapshot through distinct references/redirects.
             // Keep every fetch attempt, but admit one immutable source and one evidence origin.
-            const existing = discovery?.version === 3 ? this.sources.find(s => s.id === source.id) : undefined;
+            const existing = (discovery?.version ?? 0) >= 3 ? this.sources.find(s => s.id === source.id) : undefined;
             if (existing) {
                 raw.status = 'SUCCESS';
                 raw.reason = 'DUPLICATE_SOURCE_SNAPSHOT: final URL and content already admitted; retrieval retained without a new source/origin';

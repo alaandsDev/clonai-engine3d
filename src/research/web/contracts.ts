@@ -31,8 +31,9 @@ export interface WebResearchConfig {
     allowSessionScopeAdjustment: boolean;
     /** Phase 21 multi-source discovery; used only with sourcePolicy.researchVersion = 2. */
     v2?: WebResearchV2Config;
+    v4?: import('../v4/contracts').WebResearchV4Config;
 }
-export type DiscoveryStrategy = 'MEDIAWIKI_REFERENCE_SEARCH' | 'REFERENCE_FOLLOWING' | 'WIKIDATA_ENTITY_DISCOVERY' | 'OPENALEX_ACADEMIC_SEARCH' | 'CROSSREF_WORKS_SEARCH' | 'PUBLISHER_LINK_FOLLOWING';
+export type DiscoveryStrategy = 'MEDIAWIKI_REFERENCE_SEARCH' | 'REFERENCE_FOLLOWING' | 'WIKIDATA_ENTITY_DISCOVERY' | 'OPENALEX_ACADEMIC_SEARCH' | 'CROSSREF_WORKS_SEARCH' | 'PUBLISHER_LINK_FOLLOWING' | 'DATACITE_DATASET_SEARCH' | 'CKAN_DATASET_SEARCH';
 export type ResearchStage = 'BROAD_DISCOVERY' | 'ORIGIN_DISCOVERY' | 'VERIFICATION' | 'CORROBORATION';
 export interface WebResearchV2Config {
     strategies: DiscoveryStrategy[];
@@ -99,10 +100,12 @@ export interface SearchQuery {
     factId?: string | null;
     excludedOrigins?: string[];
     provider?: string;
+    v4?: {gapId:string;strategyId:string;familyId:string;ecosystem:import('../v4/contracts').SourceEcosystem;queryKind:string};
 }
-export type QueryPurpose = 'ENTITY_DISCOVERY' | 'METRIC_DISCOVERY' | 'RESIDENCY_DISCOVERY' | 'OFFICIAL_SOURCE_DISCOVERY' | 'ALIAS_DISCOVERY' | 'CORROBORATION_DISCOVERY';
+export type QueryPurpose = 'ENTITY_DISCOVERY' | 'METRIC_DISCOVERY' | 'RESIDENCY_DISCOVERY' | 'OFFICIAL_SOURCE_DISCOVERY' | 'ALIAS_DISCOVERY' | 'CORROBORATION_DISCOVERY' | 'DATASET_DISCOVERY' | 'CITATION_ORIGIN_PURSUIT' | 'REVERSE_CITATION_DISCOVERY';
 export type DiscoveryIndependence = 'REFERENCE_DERIVED' | 'ENTITY_DERIVED' | 'QUERY_INDEPENDENT' | 'CORPUS_INDEPENDENT' | 'PUBLISHER_DISCOVERED' | 'UNKNOWN';
 export interface SearchResult {
+    datasetIdentity?: import('../v4/contracts').DatasetIdentity;
     queryId: string;
     rank: number;
     title: string;
@@ -270,6 +273,7 @@ export interface ResearchSession {
     v2?: ResearchSessionV2;
     /** Present only for researchVersion 3 sessions. */
     v3?: ResearchSessionV3;
+    v4?: import('../v4/contracts').ResearchSessionV4;
     processingFingerprint: string;
     fingerprint: string;
 }

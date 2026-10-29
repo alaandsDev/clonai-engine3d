@@ -3,6 +3,7 @@ import path from 'node:path';
 import type { ResearchSession } from './contracts';
 import { SnapshotCache, cacheDiscovery } from './cache';
 import {saveResearchV3Artifacts} from './output-v3';
+import {saveResearchV4Artifacts} from './output-v4';
 import { corroborationReview, sourceGraphReview, structuredReview } from './review';
 // Review artifacts must display untrusted source data without embedding active HTML/media.
 const reviewData = (value: string) => value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/([\\`*_[\]!])/g, '\\$1');
@@ -67,5 +68,7 @@ export async function saveResearchSession(session: ResearchSession, root: string
     await writeFile(path.join(root, 'review', label + '.md'), `# ${reviewData(session.request.topic)}\n\nScope: ${JSON.stringify(session.scope)}\n\nCriterion: ${session.request.constraints?.residencyCriterion ?? 'not requested'}\n\nState: ${session.quality.resultState}\n\nQuality: ${JSON.stringify(session.quality)}\n\n## Queries\n\n${session.queryPlan.map(q => `- ${q.stage}: ${reviewData(q.text)} — ${reviewData(q.followupReason)}`).join('\n')}\n\n## Entities\n\n${session.entities.map(e => `- ${reviewData(e.name)}: ${e.provenance}; ${e.firstUrl}; evidence ${e.evidenceIds.join(', ')}`).join('\n')}\n\n## Facts and exact citations\n\n${factRows || 'No extractable factual evidence. No invented completion.'}\n\n## Conflicts\n\n${JSON.stringify(p.conflicts)}\n\n## Ranking and gaps\n\n${JSON.stringify(p.ranking, null, 2)}\n\nUnresolved: ${JSON.stringify(p.unresolvedQuestions)}\n\n## GROUNDED_ONLY script\n\n${reviewData(session.writer?.finalCandidate?.script ?? 'No approved script; research/semantic preflight incomplete.')}\n\n## Factual / visual matrix\n\n${JSON.stringify(session.writer?.finalPreflight?.matrix ?? [], null, 2)}\n\nNo production render was requested by this research run.\n`);
     if (session.v3)
         await saveResearchV3Artifacts(session,root,label);
+    if(session.v4)
+        await saveResearchV4Artifacts(session,root,label);
     return path.join(root, 'logs', label + '.json');
 }

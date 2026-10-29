@@ -66,3 +66,13 @@ V3 preserves document contexts, structured records, publisher identities, author
 ```powershell
 npm run check:research-v3
 ```
+
+## Research v4 (Phase 23)
+
+`researchVersion: 4` adds an opt-in fact-centric model in `pack.v4`: FactGap, EvidenceRequirementPlan, SourceStrategy, QueryFamily, source ecosystems, entity type fitness, residency/measurement assessments and conflict investigation. SourceGraph and the original fact-type quorum remain the admission authority. Explicit publisher identity across domains and declared dataset lineage can only reduce independence. Stations remain distinct from settlements; a ranking requires a source-backed locality type.
+
+The v4 presence grammar supports literal usual/permanent civilian residents while keeping seasonal/temporary/research/military/visitor/count-only meanings separate. Publication dates never fill observation dates. Explicitly different observation periods remain separate facts; changed IDs cannot count as promotion of an earlier fact. Dataset row matching requires source-backed identifying/administrative context; name equality or similarity alone abstains. Existing v1/v2/v3 paths and artifacts remain opt out.
+
+```powershell
+npm run check:research-v4
+```

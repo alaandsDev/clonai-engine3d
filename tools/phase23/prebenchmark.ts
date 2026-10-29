@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import {readFile,writeFile} from 'node:fs/promises';
+import {buildEvidencePack} from '../../src/research/pack';
+import {antiHardcodeV4} from './anti-hardcode';
+const read=async(file:string)=>JSON.parse(await readFile(file,'utf8'));
+const old=await read('out/engine3d/phase22/logs/real-cold-places-v3.json'),request=structuredClone(old.request);request.sourcePolicy.researchVersion=4;
+const p=buildEvidencePack(request,{version:1,id:'phase22-snapshots-v4-offline-diagnostic',fixture:false,labels:['OFFLINE_PRIOR_PHASE_SNAPSHOTS_NOT_PHASE23_BENCHMARK'],sources:old.acceptedSources});
+const anti=await antiHardcodeV4([old,{...old,request,EvidencePack:p}],['examples/research/web-v4-cold-request.json','examples/research/web-v4-population-request.json']);
+await writeFile('out/engine3d/phase23/analysis/prebenchmark-anti.json',JSON.stringify(anti,null,2));assert(anti.passed,JSON.stringify(anti.findings.filter(f=>f.classification==='BLOCKER')));
+const result={mode:'OFFLINE_DEVELOPMENT_NOT_A_REAL_PHASE23_BENCHMARK',passed:true,model:p.v4!.fingerprint,gaps:p.v4!.gaps.length,strategies:p.v4!.strategies.length,executable:p.v4!.strategies.filter(s=>s.executable).length,entityFitness:p.v4!.entityFitness,antiHardcode:true};await writeFile('out/engine3d/phase23/analysis/prebenchmark.json',JSON.stringify(result,null,2));console.log(JSON.stringify(result));

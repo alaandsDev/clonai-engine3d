@@ -618,6 +618,9 @@ export function interpretGrid(raw: string, grid: StructuredGrid, policy: Researc
         headers.push({ text: cells.map(x => x.text).filter(Boolean).join(' / '), spans: cells.map(x => x.span) });
     }
     const roles = headers.map(h => classifyHeader(h.text)), captionUnit = title ? headerUnit(title.text) : null;
+    // V4 dataset matching needs administrative columns as context beside an explicit locality/name column.
+    if(policy.researchVersion===4&&headers.some(h=>/^(?:place|locality|city|town|village|settlement|name)$/i.test(h.text.trim())))
+        for(let i=0;i<headers.length;i++)if(/^(?:country|state|province|region|administrative context|(?:site|station|entity|locality|place) (?:id|code|number))$/i.test(headers[i].text.trim()))roles[i]={...roles[i],role:'CONTAINER',reason:'V4 explicit identifier/administrative context beside a locality subject'};
     // Transposed metric tables: row headers carry metrics and an explicit annual column carries the aggregate.
     const annual = headers.findIndex((h, i) => i > 0 && /^(?:year|annual|ano|anual)$/i.test(cleanText(h.text.split(' / ').at(-1) ?? '')));
     // v3 accepts metric row labels written as plain cells (many official tables use <td> labels).

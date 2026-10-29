@@ -2,6 +2,7 @@ import { jsonHash } from '../editorial/fingerprint';
 import { sourceSpan } from './source';
 import { normalizeQuantity } from './extractor';
 import { temperatureQualifiers } from './structured';
+import {residencyV4} from './v4/semantics';
 import type { CanonicalFact, Evidence, FactCandidate, ResearchPolicy, Residency, SourceDocument } from './contracts';
 // Deliberately small grammar. English quotes remain English; only tuples are realized in Portuguese.
 // Version 2 (Phase 21, opt-in) adds temperature contexts, explicit "recorded in X" subjects, residency v2
@@ -20,7 +21,7 @@ function residencyV2(t: string): { residency: Residency; historical: boolean; ye
     const historical = /\b(?:was|were|had been|used to be|formerly)\b/i.test(t) && !/\b(?:is|are|has|have|remains|currently|today|still)\b/i.test(t) && residency !== 'UNINHABITED';
     return { residency, historical, year: t.match(/\b(?:as of|in|since|by)\s+((?:1[6-9]|20)\d{2})\b/)?.[1] ?? null };
 }
-export function extractEnglish(s: SourceDocument, policy: ResearchPolicy, maxItems: number, version: 1 | 2 | 3 = 1) {
+export function extractEnglish(s: SourceDocument, policy: ResearchPolicy, maxItems: number, version: 1 | 2 | 3 | 4 = 1) {
     const v2 = version >= 2;
     const evidence: Evidence[] = [], candidates: FactCandidate[] = [];
     const text = s.normalized.text;
@@ -47,7 +48,7 @@ export function extractEnglish(s: SourceDocument, policy: ResearchPolicy, maxIte
                 continue;
             // v3: an explicit tie ("A and B share the … record of V") yields one fact per subject with a shared record id;
             // "A / B" formatting alone never does.
-            const tie = version === 3 ? t.match(new RegExp('^(' + name_ + ') and (' + name_ + ') (?:share|shared|jointly hold|jointly held|hold jointly)\\b[^.]{0,80}?\\brecord\\b[^.]{0,40}?\\bof\\s+([−–-]?\\s?\\d+(?:\\.\\d+)?)\\s*°\\s*([CF])', 'u')) : null;
+            const tie = version >= 3 ? t.match(new RegExp('^(' + name_ + ') and (' + name_ + ') (?:share|shared|jointly hold|jointly held|hold jointly)\\b[^.]{0,80}?\\brecord\\b[^.]{0,40}?\\bof\\s+([−–-]?\\s?\\d+(?:\\.\\d+)?)\\s*°\\s*([CF])', 'u')) : null;
             if (tie) {
                 const tq = temperatureQualifiers(t.replace(/([−–-]?\s*\d+(?:\.\d+)?)\s*°\s*([CF])/g, ' ')), qualifiers = tq?.supported && tq.qualifiers.length ? tq.qualifiers : ['MINIMUM_RECORDED'];
                 if (/\b(?:low|lowest|cold|coldest|minimum)\b/i.test(t)) {
@@ -65,6 +66,8 @@ export function extractEnglish(s: SourceDocument, policy: ResearchPolicy, maxIte
             const contextual = context.length > 0 && /^(?:The )?(?:lowest|minimum|record low|absolute minimum|station|village|town|city|settlement)\b/i.test(t);
             const subject = explicit ?? (named || contextual ? name : '');
             if (!subject || /^(?:The |A |It |This |In |At |On |During |According )/i.test(subject))
+                continue;
+            if(version===4&&/^(?:There|These|Those|That|They|People|Residents)$/i.test(subject))
                 continue;
             // A contextual record with another explicit location is ambiguous and is left unextracted.
             if (!explicit && !named && /\b(?:at|in)\s+(?:the\s+)?[A-Z][a-z]+/.test(t))
@@ -88,8 +91,8 @@ export function extractEnglish(s: SourceDocument, policy: ResearchPolicy, maxIte
                     base.temporalContext = t.match(/\b(?:on|in)\s+((?:\d{1,2}\s+[A-Z][a-z]+\s+)?(?:1[6-9]|20)\d{2})\b/)?.[1] ?? t.match(/\bon\s+([A-Z][a-z]+\s+\d{1,2},\s+(?:1[6-9]|20)\d{2})\b/)?.[1] ?? null;
                     add(base, at, at + sentence.length, !explicit);
                 }
-                const presence = residencyV2(t);
-                if (presence)
+                const presence = version === 4 ? residencyV4(t) : residencyV2(t);
+                if (presence?.residency)
                     add({ ...base, factType: 'RESIDENCY', predicate: 'HUMAN_PRESENCE', quantity: null, metric: null, temporalContext: presence.year, residency: presence.residency, object: presence.residency, qualifiers: [presence.residency, ...(presence.historical ? ['HISTORICAL'] : [])] }, at, at + sentence.length, !explicit);
                 const population = t.match(/\bpopulation (?:of|was|is|stood at)\s+(approximately |about |around )?(\d{1,3}(?:,\d{3})+|\d+)\b(?!\s*(?:°|%|km|square|sq|per))/i);
                 if (population) {

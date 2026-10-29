@@ -8,11 +8,11 @@ export function residencyCurrent(f: GroundedFact, policy: ResearchPolicy): { cur
 /** v3: place key → observation sites whose measurements may stand for it (source-backed EntityGraph relations only). */
 export type ObservationSites = Map<string, { stationKey: string; edgeId: string }[]>;
 const subjectKey = (f: GroundedFact) => normalize(f.canonicalFact.subject).replace(/\s+/g, ' ').trim() + (f.canonicalFact.subjectKind === 'STATION' ? '|station' : '');
-export function rankFacts(plan: ResearchPlan, facts: GroundedFact[], sites?: ObservationSites): RankingResult | null {
+export function rankFacts(plan: ResearchPlan, facts: GroundedFact[], sites?: ObservationSites, fitness?:Map<string,string>): RankingResult | null {
     if (plan.request.researchGoal !== 'RANKING')
         return null;
-    if (plan.policy.researchVersion === 2 || plan.policy.researchVersion === 3)
-        return rankFactsV2(plan, facts, sites);
+    if ((plan.policy.researchVersion ?? 1) >= 2)
+        return rankFactsV2(plan, facts, sites, fitness);
     const c = plan.request.constraints ?? {}, base = { requestedCount: c.rankingCount ?? 5, criterion: c.residencyCriterion ?? null, metric: c.metric ?? null, qualifier: c.qualifier ?? null, temporalContext: c.temporalContext ?? null, tiePolicy: 'COMPETITION_INCLUDE_BOUNDARY' as const }, excluded: RankingResult['excluded'] = [];
     const finish = (status: RankingResult['status'], reason: string, eligibleItemCount: number, items: RankingResult['items'] = []) => { const raw = { ...base, status, reason, eligibleItemCount, items, excluded }; return { ...raw, fingerprint: jsonHash(raw) }; };
     if (plan.ambiguities.length)
@@ -54,7 +54,7 @@ export function rankFacts(plan: ResearchPlan, facts: GroundedFact[], sites?: Obs
     return finish('VALID', 'Derived only within the supplied snapshot, explicit metric/qualifier/criterion; equal values share factual rank', items.length, ranked);
 }
 /** v2: every entity with measurement or presence facts is evaluated and excluded with a specific gap; residency must be current; the temporal anchor is the event date or observation period. */
-function rankFactsV2(plan: ResearchPlan, facts: GroundedFact[], sites?: ObservationSites): RankingResult {
+function rankFactsV2(plan: ResearchPlan, facts: GroundedFact[], sites?: ObservationSites, fitness?:Map<string,string>): RankingResult {
     const c = plan.request.constraints ?? {}, base = { requestedCount: c.rankingCount ?? 5, criterion: c.residencyCriterion ?? null, metric: c.metric ?? null, qualifier: c.qualifier ?? null, temporalContext: c.temporalContext ?? null, tiePolicy: 'COMPETITION_INCLUDE_BOUNDARY' as const }, excluded: RankingResult['excluded'] = [];
     const finish = (status: RankingResult['status'], reason: string, eligibleItemCount: number, items: RankingResult['items'] = []) => { const raw = { ...base, status, reason, eligibleItemCount, items, excluded }; return { ...raw, fingerprint: jsonHash(raw) }; };
     if (plan.ambiguities.length)
@@ -63,6 +63,9 @@ function rankFactsV2(plan: ResearchPlan, facts: GroundedFact[], sites?: Observat
     // v2 facts carry no subjectKind, so their keys equal normalize(subject) exactly as before.
     const keyOf = sites ? subjectKey : (f: GroundedFact) => normalize(f.canonicalFact.subject);
     for (const subject of [...new Set(facts.filter(f => f.factType === 'MEASUREMENT' || f.factType === 'RESIDENCY').map(keyOf))].sort()) {
+        if(fitness&&!subject.endsWith('|station')&&![...fitness].some(([name,value])=>normalize(name)===subject&&value==='FIT')) {
+            excluded.push({subject,reason:'ENTITY_TYPE_FITNESS: no source-backed settlement/locality type'});continue;
+        }
         if (subject.endsWith('|station')) {
             excluded.push({ subject, reason: 'OBSERVATION_SITE_NOT_A_PLACE: measurements count for a place only through a source-backed relation' });
             continue;
