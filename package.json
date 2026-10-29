@@ -60,7 +60,8 @@
     "check:causal-curiosity": "tsx --test tests/causal-curiosity.test.ts",
     "check:contextual-mechanism": "tsx --test tests/contextual-mechanism.test.ts",
     "curiosity:run": "tsx cli/curiosity.ts",
-    "vertical:run": "tsx cli/vertical-slice.ts"
+    "vertical:run": "tsx cli/vertical-slice.ts",
+    "check:visual-causal": "tsx --test tests/visual-causal.test.ts"
   },
   "dependencies": {
     "@react-three/fiber": "8.18.0",

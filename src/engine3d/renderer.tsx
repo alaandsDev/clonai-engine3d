@@ -16,6 +16,7 @@ import { cameraAt } from "./motion";
 import type { Pose } from "./motion";
 import type { CameraState } from "./directed";
 import type {EnvironmentState} from './demonstration-contracts';
+import {ContactShadow,type EnvironmentStyle} from './assemblies';
 import { Character, Environment, Prop, Vfx } from "./library";
 import { COMPOSITION_Z } from "../composition-layers";
 function Camera({ shot, t, state }: { shot: ShotSpec; t: number; state?: CameraState }) {
@@ -30,7 +31,7 @@ function Camera({ shot, t, state }: { shot: ShotSpec; t: number; state?: CameraS
   camera.updateMatrixWorld();
   return null;
 }
-export function ProceduralShot({ shot: input, directed,worldExtras,environmentState }: { shot: ShotSpec; directed?: {camera:CameraState;poses:Record<string,Pose>;visibleProps:Record<string,boolean>;presenterVisible?:boolean;propHighlights?:Record<string,number>};worldExtras?:React.ReactNode;environmentState?:EnvironmentState }) {
+export function ProceduralShot({ shot: input, directed,worldExtras,environmentState,environmentStyle }: { shot: ShotSpec; directed?: {camera:CameraState;poses:Record<string,Pose>;visibleProps:Record<string,boolean>;presenterVisible?:boolean;propHighlights?:Record<string,number>};worldExtras?:React.ReactNode;environmentState?:EnvironmentState;environmentStyle?:EnvironmentStyle }) {
   const shot = useMemo(() => {
     const { sceneId, startFrame, endFrame, durationFrames, ...spec } =
       input as ShotSpec & Record<string, unknown>;
@@ -51,10 +52,10 @@ export function ProceduralShot({ shot: input, directed,worldExtras,environmentSt
         gl={{ antialias: true, preserveDrawingBuffer: true }}
       >
         <Camera shot={shot} t={t} state={directed?.camera}/>
-        <Environment id={shot.environment.resourceId} state={environmentState}/>
+        <Environment id={shot.environment.resourceId} state={environmentState} style={environmentStyle}/>
         {worldExtras}
         {shot.characters.filter(()=>directed?.presenterVisible!==false).map((i) => (
-          <Character key={i.instanceId} instance={i} shot={shot} t={t} directedPose={directed?.poses[i.instanceId]}/>
+          <React.Fragment key={i.instanceId}>{environmentStyle&&directed?.poses[i.instanceId]&&<ContactShadow at={[directed.poses[i.instanceId].position[0],0,directed.poses[i.instanceId].position[2]]} radius={0.42*(i.scale?.[0]??1)} opacity={0.3}/>}<Character instance={i} shot={shot} t={t} directedPose={directed?.poses[i.instanceId]}/></React.Fragment>
         ))}
         {shot.props.filter(i=>directed?.visibleProps[i.instanceId]!==false).map((i) => (
           <Prop key={i.instanceId} instance={i} shot={shot} t={t} highlight={directed?.propHighlights?.[i.instanceId]??0}/>

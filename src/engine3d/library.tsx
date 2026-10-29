@@ -2,6 +2,7 @@ import React from "react";
 import {CarGeometry} from './car';
 import type {EnvironmentState} from './demonstration-contracts';
 import {Color} from 'three';
+import {StylizedBackdrop,ContactShadow,PALETTE,type EnvironmentStyle} from './assemblies';
 import { fail } from "./contracts";
 import { requireExecutor } from "./executors";
 import { effectiveDoorOpenProgress } from "./door";
@@ -443,16 +444,16 @@ const envColors: Record<string, [string, string]> = {
   SHELTER: ["#816f66", "#a28b72"],
   DEAD_FOREST: ["#9ba4a0", "#777b70"],
 };
-export function Environment({ id, state }: { id: string;state?:EnvironmentState }) {
+export function Environment({ id, state, style }: { id: string;state?:EnvironmentState;style?:EnvironmentStyle }) {
   const name = requireExecutor(id, "environment");
   const [baseBg,baseGround]=envColors[name];
   const bg=state?'#'+new Color(baseBg).multiply(new Color(state.tint)).lerp(new Color('#192330'),state.backgroundEmphasis*.35).getHexString():baseBg,ground=state?'#'+new Color(baseGround).multiply(new Color(state.tint)).getHexString():baseGround;
   const forest = ["FOREST", "DEAD_FOREST", "WINTER"].includes(name);
   return (
     <>
-      <color attach="background" args={[bg]} />
-      <fog attach="fog" args={[bg, 12-(state?.fogIntensity??0)*8, 28-(state?.fogIntensity??0)*18]} />
-      <ambientLight intensity={1.3} />
+      <color attach="background" args={[style?'#e3efe9':bg]} />
+      <fog attach="fog" args={[style?'#e3efe9':bg, (style?18:12)-(state?.fogIntensity??0)*8, (style?60:28)-(state?.fogIntensity??0)*18]} />
+      <ambientLight intensity={style?0.55:1.3} />
       <directionalLight
         position={[-4, 8, 5]}
         intensity={2.2}
@@ -460,14 +461,15 @@ export function Environment({ id, state }: { id: string;state?:EnvironmentState 
       />
       <directionalLight position={[4, 3, -2]} intensity={1.2} color="#9abddd" />
       <group visible={state?.visibility??true}>
-      {(state?.groundCutaway??0)>0?<>{[-1,1].map(side=><Box key={side} at={[side*(25+(state!.groundCutaway*3)), -.15,0]} size={[50,.25,100]} color={ground}/>)}</>:<Box at={[0, -0.15, 0]} size={[100, 0.25, 100]} color={ground} />}
+      {style?<StylizedBackdrop style={style} ground={'#'+new Color(forest?PALETTE.GRASS:baseGround).multiply(new Color(state?.tint??'#ffffff')).getHexString()} sky={['#7fb8e6','#e6f2ec']}/>:(state?.groundCutaway??0)>0?<>{[-1,1].map(side=><Box key={side} at={[side*(25+(state!.groundCutaway*3)), -.15,0]} size={[50,.25,100]} color={ground}/>)}</>:<Box at={[0, -0.15, 0]} size={[100, 0.25, 100]} color={ground} />}
       {forest ? (
         Array.from({ length: 12 }, (_, n) => {
           const x = (n % 2 ? -1 : 1) * (2.8 + seeded(n + 4) * 4),
             z = -2 - seeded(n + 9) * 10;
           return (
             <group key={n} position={[x, 0, z]}>
-              <Box at={[0, 1, 0]} size={[0.18, 2, 0.18]} color="#5f7274" />
+              {style&&<ContactShadow at={[0,0,0]} radius={0.85}/>}
+              <Box at={[0, 1, 0]} size={[0.18, 2, 0.18]} color={style?"#6b4f3a":"#5f7274"} />
               {name !== "DEAD_FOREST" &&
                 [0, 1, 2].map((k) => (
                   <mesh key={k} position={[0, 1.1 + k * 0.55, 0]}>

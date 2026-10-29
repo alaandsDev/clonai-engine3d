@@ -43,7 +43,14 @@ export interface DemonstrationSubject {
     color: string;
     path?: Vec3[];
     layer?: 'surface' | 'subsurface' | 'deep';
+    /** Phase27B: optional generic stylized assembly composed from primitives (visual only). */
+    assembly?: Assembly;
 }
+/** Generic stylized assemblies and the primitive kind each one renders. Editorial geometry only. */
+export const ASSEMBLY_KINDS = { TERRAIN_SECTION: 'LAYER', LIQUID_VOLUME: 'LAYER', PIPE: 'PATH', OPEN_BASIN: 'CYLINDER', GABLED_BUILDING: 'BOX', FRAME_PANEL: 'BOX', PANEL: 'BOX', CARRIAGE: 'BOX', DISPLAY_BLOCK: 'BOX' } as const;
+export type Assembly = keyof typeof ASSEMBLY_KINDS;
+/** Estimated mesh count per assembly (budget accounting, not exact draw calls). */
+export const ASSEMBLY_MESHES: Record<Assembly, number> = { TERRAIN_SECTION: 22, LIQUID_VOLUME: 14, PIPE: 12, OPEN_BASIN: 6, GABLED_BUILDING: 9, FRAME_PANEL: 6, PANEL: 3, CARRIAGE: 6, DISPLAY_BLOCK: 3 };
 export interface SubjectState {
     position: Vec3;
     rotation: Vec3;

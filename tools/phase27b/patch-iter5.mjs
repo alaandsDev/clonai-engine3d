@@ -1,0 +1,5 @@
+import {readFileSync,writeFileSync} from 'node:fs';
+const edit=(f,pairs)=>{let s=readFileSync(f,'utf8');for(const [a,b] of pairs){if(s.split(a).length!==2)throw Error('anchor '+f+': '+a.slice(0,70));s=s.replace(a,b);}writeFileSync(f,s);};
+edit('src/visual-causal/compile.ts',[[`  if(b.presenterIntent==='REVEAL_SYSTEM'){act(b.startFrame,span(b,0,0.7)[1],'ACTION_POINT_001','REVEAL_SYSTEM',focus);continue;}`,`  // Indicate where the hidden part meets the visible world (a downward point at its exposed end reads as a gesture).
+  if(b.presenterIntent==='REVEAL_SYSTEM'){const fe=b.focusEntityId?ent(b.focusEntityId):null,top=fe?.path?[...fe.path].sort((x,y)=>y[1]-x[1])[0]:focus;act(b.startFrame,span(b,0,0.7)[1],'ACTION_POINT_001','REVEAL_SYSTEM',top);continue;}`]]);
+edit('src/visual-causal/planner.ts',[[`WORLD:cam([-1.3,1.8,7.6],[0.35,0.8,-0.5]),SYSTEM:cam([0.6,1.45,5.5],[-0.5,0.95,-0.1]),CUTAWAY:cam([1.5,0.9,7.6],[0,-2.0,-0.3])`,`WORLD:cam([-3.4,2.0,7.4],[0.3,1.05,-0.6]),SYSTEM:cam([0.6,1.45,5.5],[-0.5,0.95,-0.1]),CUTAWAY:cam([1.6,1.6,8.4],[-0.2,-1.4,-0.3])`]]);

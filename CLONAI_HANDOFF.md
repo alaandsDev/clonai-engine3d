@@ -1,6 +1,50 @@
-# ClonAI — handoff do checkpoint lógico Phase26 + Phase26B
+# ClonAI — handoff do checkpoint Phase27 + Phase27B
 
-Atualização de finalização em 2026-10-29. Esta seção é o estado atual; o handoff da Fase20 permanece integralmente abaixo como histórico. Suas referências a master, Fase21 não iniciada e migração inicial não descrevem o checkout atual.
+Atualização de finalização em 2026-10-29. Esta seção é o estado atual. A seção Phase26 + Phase26B e o handoff da Fase20 permanecem abaixo como histórico.
+
+## Estado do checkpoint
+
+- Branch `main`. Checkpoint anterior: `7de502dc34a92bd18467e310095fadb5018889e9` (Phase26 + 26B). Commit deste checkpoint: `Phase27-27B: persistent causal visual foundation and polish` (o SHA não é gravado neste arquivo; conferir `git log` e `origin/main`).
+- **Phase27: COMPLETE** como piloto visual causal técnico (P1–P25 PASS). Ver PHASE27_REPORT.md.
+- **Phase27B: PARTIAL — visual foundation accepted.** 25 PASS, 2 PARTIAL (B22, B27). Ver PHASE27B_REPORT.md.
+- **Visual foundation: READY TO FREEZE = YES.** É uma base aceita para a próxima fase, não um sistema visual final, um produto final, nem a solução do problema de conhecimento.
+- Artifact visual review: 0 FAIL, 5 GOOD, 7 ACCEPTABLE (PHYSICAL_READABILITY, TERRAIN_QUALITY, CUTAWAY_QUALITY, SYSTEM_SILHOUETTE, CAMERA_GESTURE_COORDINATION e GROUND_CONTACT em GOOD; os demais ACCEPTABLE).
+- MP4 primário (fora do Git, `out/` é ignorado): `out/engine3d/phase27b/final/phase27b-well-final.mp4`, SHA-256 `e7d72e43ded29a9a3ef00ccba09fdbc64281cd35ce75fe3c869ebaf33323e5f9`, 25,27 s, 480×854, 30 fps, 758 frames.
+- Integridade factual: mesmo roteiro de 64 palavras, mesma voz, mesmas 4 relações, 0 inventadas, VisualProof DIRECT 1 / PARTIAL 1 / SYMBOLIC 2 / NONE 0.
+- Registry: Engine3D 50 / SFX 8 / VISUAL 5. Regressão: 22/22 comandos, 0 falhas. Replay com 0 chamadas de rede; anti-hardcode com 0 blockers; 14 vídeos históricos inalterados.
+
+## Arquitetura entregue
+
+`src/visual-causal/`: PersistentWorld (worldId, sistema persistente, continuidade de objetos/estado), CausalVisualBeat com separação grounded/editorial, VisualProof, camera zones, cutaway/reveal, terreno/subsuperfície, presenter reutilizado (CHAR_CAIO_001) com arco de performance e alvos de look/point, coordenação câmera–gesto, integração com DirectedSequence/Engine3D, layer framing, screen occupancy, QA, replay e proveniência.
+
+`src/engine3d/assemblies.tsx` e contratos: assemblies estilizados genéricos (TERRAIN_SECTION, LIQUID_VOLUME, PIPE, OPEN_BASIN, GABLED_BUILDING, FRAME_PANEL, PANEL, CARRIAGE, DISPLAY_BLOCK), validados contra o kind antes do render; ContactShadow; StylizedBackdrop; o estilo de ambiente só se ativa quando o programa tem assemblies (programas legados renderizam igual).
+
+`tools/phase27/` e `tools/phase27b/`: harnesses de operador (render, preview, events, compare, pilot, replay, anti-hardcode, integrity, probe secundário e scripts de patch das iterações). Eles leem e escrevem em `out/`, que o Git não transporta.
+
+## Não resolvido (conhecido e aceito)
+
+1. Representação grounded da pressão/causa artesiana: sem rótulos, o vídeo mostra um poço trazendo água subterrânea até a casa, mas não o caráter "artesiano" (B27 PARTIAL). Isso exige conhecimento causal grounded adicional, não polish visual.
+2. Densidade de conhecimento / progressão causal conectada.
+3. Elevador: frases longas sustentadas por uma única relação geram ~11,2 s de estase significativa (B22 PARTIAL), embora as capabilities genéricas funcionem.
+4. A representação visual de camada porosa saturada continua limitada (a água lembra uma piscina num fosso).
+5. A expressividade do presenter continua básica (point/look/turn/wave, sem rosto nem lipsync).
+6. Não há SFX aprovado de água/terra.
+
+## Próxima fase (somente recomendação; não iniciada)
+
+**Phase28 — GROUNDED PROGRESSIVE CURIOSITY STORY ENGINE.** Atacar conhecimento/narrativa, não visual:
+
+GOAL → ATTEMPT → PROBLEM → CAUSE → SOLUTION → STATE_CHANGE → NEW_PROBLEM → NEXT_SOLUTION → FINAL_FUNCTIONAL_STATE → PAYOFF, somente quando grounded.
+
+Princípio obrigatório: Phase28 não deve inventar Problem/Solution para satisfazer a estrutura narrativa. Story slots são oportunidades de pesquisa/planejamento, não fatos. Se a Evidence não suportar uma etapa, ela deve ser marcada UNKNOWN, UNSUPPORTED ou SKIPPED, ou removida da cadeia factual.
+
+Phase28 NOT STARTED. Este checkpoint não autoriza contratos, testes, pesquisa, código ou relatório da Phase28.
+
+---
+
+# Handoff histórico do checkpoint Phase26 + Phase26B
+
+Esta seção descrevia o estado atual na finalização da Phase26. Suas referências a Phase27 NOT STARTED e ao commit Phase26 como checkpoint vigente agora são históricas.
 
 ## Estado aprovado para o checkpoint
 

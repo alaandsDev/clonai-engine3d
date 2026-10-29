@@ -2,7 +2,7 @@ import { Vector3 } from 'three';
 import { fail, type ShotSpec, type Vec3 } from './contracts';
 import { fields, finite, vec, text, list } from './schema';
 import { resource } from './validation';
-import { carStates, DEMONSTRATION_COMPILER_VERSION, DEMONSTRATION_LIMITS, type DemonstrationProgram, type DemonstrationState, type SubjectState, type NarrativeClaim, type VisualProof, type EnvironmentState } from './demonstration-contracts';
+import { carStates, ASSEMBLY_KINDS, ASSEMBLY_MESHES, DEMONSTRATION_COMPILER_VERSION, DEMONSTRATION_LIMITS, type DemonstrationProgram, type DemonstrationState, type SubjectState, type NarrativeClaim, type VisualProof, type EnvironmentState } from './demonstration-contracts';
 const enums = (x: unknown, values: string[]) => { if (typeof x !== 'string' || !values.includes(x))
     fail('DEMONSTRATION_SCHEMA', 'unknown enum ' + String(x)); };
 function shape(v: unknown, keys: string[], optional: string[] = []) { fields(v, keys, 'demonstration'); for (const k of keys)
@@ -44,7 +44,10 @@ export function proofQa(claims: NarrativeClaim[], proofs: VisualProof[]) { const
         fail('PROOF_QA', 'missing visual evidence');
 } if (used.size !== ids.size)
     fail('PROOF_QA', 'missing claim assessment'); const requires = claims.filter(c => c.requiresVisualProof); return { claimsRequiringVisualProof: requires.length, directClaims: requires.filter(c => proofs.some(p => p.claimId === c.id && p.proofLevel === 'DIRECT')).length, directVisualProofRate: requires.length ? requires.filter(c => proofs.some(p => p.claimId === c.id && p.proofLevel === 'DIRECT')).length / requires.length : null, scope: 'Structural representation only; not factual truth or aesthetic quality' }; }
-export const environmentCapabilities = (id: string) => ['visibility', 'tint', 'fogIntensity', 'backgroundEmphasis', ...(id === 'ENV_LAB_001' ? ['groundCutaway'] : [])];
+/** groundCutaway splits the environment's ground plane (generic code path in Environment). Phase27
+ * declares it, explicitly, for the outdoor terrain/urban grounds used by world templates (still "only where declared"). */
+export const GROUND_CUTAWAY_ENVIRONMENTS = ['ENV_LAB_001', 'ENV_FOREST_001', 'ENV_DEAD_FOREST_001', 'ENV_CITY_001', 'ENV_RUINED_STREET_001'];
+export const environmentCapabilities = (id: string) => ['visibility', 'tint', 'fogIntensity', 'backgroundEmphasis', ...(GROUND_CUTAWAY_ENVIRONMENTS.includes(id) ? ['groundCutaway'] : [])];
 export function environmentShape(e: EnvironmentState, id: string) { shape(e, ['visibility', 'tint', 'fogIntensity', 'groundCutaway', 'backgroundEmphasis']); bool(e.visibility); color(e.tint); for (const k of ['fogIntensity', 'groundCutaway', 'backgroundEmphasis'] as const)
     finite(e[k], k, 0, 1); if (e.groundCutaway && !environmentCapabilities(id).includes('groundCutaway'))
     fail('UNSUPPORTED_MODIFIER', 'groundCutaway ' + id); }
@@ -83,7 +86,8 @@ export function validateDemonstrationProgram(p: DemonstrationProgram, shot: Shot
     const ids = new Set<string>();
     let meshes = 0;
     for (const s of p.subjects) {
-        shape(s, ['id', 'kind', 'resourceId', 'size', 'color', 'path', 'layer'], ['resourceId', 'path', 'layer']);
+        shape(s, ['id', 'kind', 'resourceId', 'size', 'color', 'path', 'layer', 'assembly'], ['resourceId', 'path', 'layer', 'assembly']);
+        if (s.assembly !== undefined) { enums(s.assembly, Object.keys(ASSEMBLY_KINDS)); if (ASSEMBLY_KINDS[s.assembly] !== s.kind) fail('DEMONSTRATION_SCHEMA', 'assembly ' + s.assembly + ' requires ' + ASSEMBLY_KINDS[s.assembly]); }
         text(s.id, 'subject');
         if (ids.has(s.id) || s.id === 'ENVIRONMENT')
             fail('DEMONSTRATION_SCHEMA', 'duplicate/reserved subject');
@@ -102,7 +106,7 @@ export function validateDemonstrationProgram(p: DemonstrationProgram, shot: Shot
         else if (s.resourceId)
             fail('DEMONSTRATION_SCHEMA', 'primitive cannot have resourceId');
         else
-            meshes += s.kind === 'CYLINDER' ? 3 : s.kind === 'PATH' ? 14 : 1;
+            meshes += s.assembly ? ASSEMBLY_MESHES[s.assembly] : s.kind === 'CYLINDER' ? 3 : s.kind === 'PATH' ? 14 : 1;
         if (s.kind === 'PATH') {
             list(s.path, 'path');
             if (s.path!.length < 2 || s.path!.length > DEMONSTRATION_LIMITS.pathPoints)

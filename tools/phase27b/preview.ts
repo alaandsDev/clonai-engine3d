@@ -1,0 +1,25 @@
+import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
+import path from 'node:path';
+import {plannerInputFromCuriosity} from '../../src/visual-causal/input';
+import {planVisualCausal} from '../../src/visual-causal/planner';
+import {validateVisualPlan} from '../../src/visual-causal/verify';
+import {compileVisualPlan} from '../../src/visual-causal/compile';
+import {visualQa} from '../../src/visual-causal/qa';
+import {sentenceTiming,renderStills,contactSheet,type VoiceTrack} from '../../src/visual-causal/media';
+/** Operator harness: fast still preview of the pilot (same Phase27 voice tracks; no MP4). */
+const [writerFile,topic,label,tracksFile,extra]=process.argv.slice(2);
+if(!writerFile||!topic||!label||!tracksFile)throw Error('Usage: preview <writer.json> "<topic>" <label> <tracks.json> [frames,csv]');
+const root='out/engine3d/phase27b/attempts/'+label;mkdirSync(root,{recursive:true});
+const w=JSON.parse(readFileSync(writerFile,'utf8')),fps=30,tracks:VoiceTrack[]=JSON.parse(readFileSync(tracksFile,'utf8')),timing=sentenceTiming(tracks,8);
+const input=plannerInputFromCuriosity(topic,w,timing,fps),plan=planVisualCausal(input),validation=validateVisualPlan(plan,input.relations.map(r=>r.id));
+if(!validation.valid)throw Error('PLAN_INVALID '+validation.issues.join(','));
+const seq=compileVisualPlan(plan,{sentences:timing.map(t=>({id:t.sentenceId,text:w.sentences.find((s:{id:string})=>s.id===t.sentenceId).text,startFrame:t.startFrame,endFrame:t.endFrame}))});
+for(const s of seq.shots)delete (s as {onScreenText?:string}).onScreenText;
+seq.captions=[];
+const q=(x:number)=>Math.min(seq.totalFrames-1,Math.round(x)),pct=[0,0.15,0.3,0.45,0.6,0.75,0.9,1].map(x=>q(x*(seq.totalFrames-1))),mids=plan.beats.map(b=>q((b.startFrame+b.endFrame)/2));
+const frames=extra?extra.split(',').map(Number):[...new Set([...pct,...mids])].sort((a,b)=>a-b);
+writeFileSync(path.join(root,'plan.json'),JSON.stringify(plan,null,1));writeFileSync(path.join(root,'sequence.json'),JSON.stringify(seq,null,1));
+writeFileSync(path.join(root,'qa.json'),JSON.stringify(visualQa(plan,seq),null,1));
+const files=await renderStills(seq,frames,path.join(root,'stills'));
+await contactSheet(files,path.join(root,'preview-sheet.png'),Math.min(6,files.length));
+console.log(JSON.stringify({beats:plan.beats.map(b=>[b.order,b.visualIntent,b.cameraZone,b.startFrame,b.endFrame]),frames,total:seq.totalFrames}));
