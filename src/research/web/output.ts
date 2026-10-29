@@ -2,6 +2,7 @@ import { mkdir, writeFile, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { ResearchSession } from './contracts';
 import { SnapshotCache, cacheDiscovery } from './cache';
+import {saveResearchV3Artifacts} from './output-v3';
 import { corroborationReview, sourceGraphReview, structuredReview } from './review';
 // Review artifacts must display untrusted source data without embedding active HTML/media.
 const reviewData = (value: string) => value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/([\\`*_[\]!])/g, '\\$1');
@@ -64,5 +65,7 @@ export async function saveResearchSession(session: ResearchSession, root: string
     await mkdir(path.join(root, 'review'), { recursive: true });
     const factRows = p.groundedFacts.map(f => { const e = p.evidence.find(e => f.evidenceIds.includes(e.id))!, source = p.sources.find(s => s.id === e.sourceId)!, used = Boolean(session.writer?.finalCandidate?.sentences.some(s => s.groundedFactIds.includes(f.id))); return `### ${f.id}\n\n${JSON.stringify(f.canonicalFact)}\n\nSource: [${reviewData(source.title)}](${source.canonicalLocator.replace(/[()]/g, encodeURIComponent)})\n\nExact snapshot evidence (${e.sourceSpan.start}–${e.sourceSpan.end}):\n\n> ${reviewData(e.exactText).replace(/\n/g, ' ')}\n\nStatus ${f.status}; qualifiers ${f.qualifiers.join(', ')}; used in script: ${used}; visual: ${session.writer?.finalPreflight?.matrix.filter(m => m.groundedFactIds.includes(f.id)).map(m => m.visualProof + ': ' + m.gap).join('; ') || 'NOT_PLANNED'}.\n`; }).join('\n');
     await writeFile(path.join(root, 'review', label + '.md'), `# ${reviewData(session.request.topic)}\n\nScope: ${JSON.stringify(session.scope)}\n\nCriterion: ${session.request.constraints?.residencyCriterion ?? 'not requested'}\n\nState: ${session.quality.resultState}\n\nQuality: ${JSON.stringify(session.quality)}\n\n## Queries\n\n${session.queryPlan.map(q => `- ${q.stage}: ${reviewData(q.text)} — ${reviewData(q.followupReason)}`).join('\n')}\n\n## Entities\n\n${session.entities.map(e => `- ${reviewData(e.name)}: ${e.provenance}; ${e.firstUrl}; evidence ${e.evidenceIds.join(', ')}`).join('\n')}\n\n## Facts and exact citations\n\n${factRows || 'No extractable factual evidence. No invented completion.'}\n\n## Conflicts\n\n${JSON.stringify(p.conflicts)}\n\n## Ranking and gaps\n\n${JSON.stringify(p.ranking, null, 2)}\n\nUnresolved: ${JSON.stringify(p.unresolvedQuestions)}\n\n## GROUNDED_ONLY script\n\n${reviewData(session.writer?.finalCandidate?.script ?? 'No approved script; research/semantic preflight incomplete.')}\n\n## Factual / visual matrix\n\n${JSON.stringify(session.writer?.finalPreflight?.matrix ?? [], null, 2)}\n\nNo production render was requested by this research run.\n`);
+    if (session.v3)
+        await saveResearchV3Artifacts(session,root,label);
     return path.join(root, 'logs', label + '.json');
 }

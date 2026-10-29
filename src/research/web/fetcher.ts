@@ -11,9 +11,12 @@ export function scriptDiagnostic(content: string, text: string): 'JS_RENDER_REQU
         return 'ANTI_BOT_CHALLENGE';
     if (text.trim().length >= 400)
         return null;
+    // Compact static tables/records still contain data; byte length alone cannot require JavaScript.
+    if (text.trim().length >= 20 && /<table\b|<dl\b|<(?:p|td)\b[^>]*>\s*<(?:strong|b|label)\b/i.test(content))
+        return null;
     if (/<noscript[^>]*>[^<]*(?:enable|requires?) javascript|<div[^>]+id=["'](?:root|app|__next|__nuxt)["'][^>]*>\s*<\/div>|<app-root|ng-version=|data-reactroot/i.test(content) || (content.match(/<script\b/gi) ?? []).length >= 5)
         return 'JS_RENDER_REQUIRED';
-    return 'EMPTY_STATIC_HTML';
+    return text.trim().length >= 40 ? null : 'EMPTY_STATIC_HTML';
 }
 /** v2 direct-evidence flag: a measured value with a unit, a unit stated in a header, or explicit presence/census wording. Extraction is still checked separately. */
 const DIRECT_V2 = /\d\s*(?:°|&deg;)|(?:°|&deg;)\s*[CF]\b|\bpermanent(?:ly)? (?:population|inhabited|populated|residents)\b|\buninhabited\b|\bcensus\b|\bpopulation\b/i;
@@ -123,6 +126,15 @@ export class WebSourceProvider implements SourceProvider {
             const preserved = discovery?.version === 3 && !assessment.accepted && assessment.reasons.every(x => x === 'LANGUAGE_UNSUPPORTED_FOR_EXTRACTION');
             if (!assessment.accepted && !preserved)
                 throw Error('CONTENT_UNAVAILABLE quality ' + assessment.reasons.join(','));
+            // V3 can reach the same final snapshot through distinct references/redirects.
+            // Keep every fetch attempt, but admit one immutable source and one evidence origin.
+            const existing = discovery?.version === 3 ? this.sources.find(s => s.id === source.id) : undefined;
+            if (existing) {
+                raw.status = 'SUCCESS';
+                raw.reason = 'DUPLICATE_SOURCE_SNAPSHOT: final URL and content already admitted; retrieval retained without a new source/origin';
+                raw.elapsedMs = this.client.env.now() - start;
+                return { attempt: raw, source: structuredClone(existing) };
+            }
             if (discovery) {
                 // v2 admission: per-source pack check plus explicit session-level count/byte budgets (no quadratic re-intake).
                 const total = this.sources.reduce((n, s) => n + Buffer.byteLength(s.content, 'utf8'), Buffer.byteLength(content, 'utf8'));

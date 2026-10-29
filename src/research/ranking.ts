@@ -59,7 +59,7 @@ function rankFactsV2(plan: ResearchPlan, facts: GroundedFact[], sites?: Observat
     const finish = (status: RankingResult['status'], reason: string, eligibleItemCount: number, items: RankingResult['items'] = []) => { const raw = { ...base, status, reason, eligibleItemCount, items, excluded }; return { ...raw, fingerprint: jsonHash(raw) }; };
     if (plan.ambiguities.length)
         return finish('RANKING_NOT_SUPPORTED', plan.ambiguities.map(a => a.code).join(', '), 0);
-    const anchor = (f: GroundedFact) => f.canonicalFact.temporalContext ?? f.canonicalFact.observationPeriod ?? null, items: { fact: GroundedFact; residency: GroundedFact | null }[] = [];
+    const anchor = (f: GroundedFact) => f.canonicalFact.temporalContext ?? f.canonicalFact.observationPeriod ?? null, items: { fact: GroundedFact; residency: GroundedFact | null; placeName?: string }[] = [];
     // v2 facts carry no subjectKind, so their keys equal normalize(subject) exactly as before.
     const keyOf = sites ? subjectKey : (f: GroundedFact) => normalize(f.canonicalFact.subject);
     for (const subject of [...new Set(facts.filter(f => f.factType === 'MEASUREMENT' || f.factType === 'RESIDENCY').map(keyOf))].sort()) {
@@ -83,16 +83,16 @@ function rankFactsV2(plan: ResearchPlan, facts: GroundedFact[], sites?: Observat
             excluded.push({ subject, reason: 'Multiple unresolved measurement contexts/values/units require an explicit criterion' });
             continue;
         }
-        items.push({ fact: [...measurements].sort((a, b) => b.independentOriginCount - a.independentOriginCount || a.id.localeCompare(b.id, 'en'))[0], residency });
+        items.push({ fact: [...measurements].sort((a, b) => b.independentOriginCount - a.independentOriginCount || a.id.localeCompare(b.id, 'en'))[0], residency, ...(sites ? { placeName: facts.find(f => keyOf(f) === subject)!.canonicalFact.subject } : {}) });
     }
     if (items.length < base.requestedCount)
-        return finish('RANKING_INCOMPLETE', 'Insufficient comparable eligible entities; never invent the missing item. Eligible (unranked): ' + (items.map(i => i.fact.canonicalFact.subject + ' [' + i.fact.id + (i.residency ? ', ' + i.residency.id : '') + ']').sort().join('; ') || 'none'), items.length);
+        return finish('RANKING_INCOMPLETE', 'Insufficient comparable eligible entities; never invent the missing item. Eligible (unranked): ' + (items.map(i => (i.placeName ?? i.fact.canonicalFact.subject) + ' [' + i.fact.id + (i.residency ? ', ' + i.residency.id : '') + ']').sort().join('; ') || 'none'), items.length);
     if (new Set(items.map(i => anchor(i.fact))).size > 1 && plan.policy.temporalComparison === 'SAME_CONTEXT' || new Set(items.map(i => i.fact.canonicalFact.quantity!.normalizedUnit)).size > 1)
         return finish('RANKING_NOT_SUPPORTED', 'Incompatible temporal contexts or units under the explicit policy', items.length);
     if (items.some(i => i.fact.canonicalFact.quantity!.approximation === 'APPROXIMATE'))
         return finish('RANKING_NOT_SUPPORTED', 'Approximate values require an explicit uncertainty-comparison policy; none implemented', items.length);
-    const sorted = items.sort((a, b) => a.fact.canonicalFact.quantity!.normalizedValue - b.fact.canonicalFact.quantity!.normalizedValue || normalize(a.fact.canonicalFact.subject).localeCompare(normalize(b.fact.canonicalFact.subject), 'en')), cutoff = sorted[base.requestedCount - 1].fact.canonicalFact.quantity!.normalizedValue, selected = sorted.filter(i => i.fact.canonicalFact.quantity!.normalizedValue <= cutoff);
+    const sorted = items.sort((a, b) => a.fact.canonicalFact.quantity!.normalizedValue - b.fact.canonicalFact.quantity!.normalizedValue || normalize(a.placeName ?? a.fact.canonicalFact.subject).localeCompare(normalize(b.placeName ?? b.fact.canonicalFact.subject), 'en')), cutoff = sorted[base.requestedCount - 1].fact.canonicalFact.quantity!.normalizedValue, selected = sorted.filter(i => i.fact.canonicalFact.quantity!.normalizedValue <= cutoff);
     let rank = 1;
     return finish('VALID', 'Derived only within the session snapshots, explicit metric/qualifier/criterion; equal values share factual rank', items.length, selected.map((i, index) => { const value = i.fact.canonicalFact.quantity!.normalizedValue; if (index && value !== selected[index - 1].fact.canonicalFact.quantity!.normalizedValue)
-        rank = index + 1; return { subject: i.fact.canonicalFact.subject, rank, tied: selected.filter(j => j.fact.canonicalFact.quantity!.normalizedValue === value).length > 1, value, unit: i.fact.canonicalFact.quantity!.normalizedUnit, measurementFactId: i.fact.id, residencyFactId: i.residency?.id ?? null }; }));
+        rank = index + 1; return { subject: (i.placeName ?? i.fact.canonicalFact.subject), rank, tied: selected.filter(j => j.fact.canonicalFact.quantity!.normalizedValue === value).length > 1, value, unit: i.fact.canonicalFact.quantity!.normalizedUnit, measurementFactId: i.fact.id, residencyFactId: i.residency?.id ?? null }; }));
 }

@@ -1,7 +1,7 @@
 import { jsonHash } from '../editorial/fingerprint';
 import { normalize } from '../semantics/normalize';
 import type { SourceSpan } from '../semantics/contracts';
-import { attributes, cleanText, decodeEntities, temperatureQualifiers, classifyHeader, parseTemperatureValue, type ParsedHtml, type StructuredFact, type StructuredGrid } from './structured';
+import { attributes, cleanText, decodeEntities, staticMarkup, temperatureQualifiers, classifyHeader, parseTemperatureValue, type ParsedHtml, type StructuredFact, type StructuredGrid } from './structured';
 import type { CanonicalFact, MultiSubjectSemantics, RecordField, ResearchPolicy, StructuredRecord } from './contracts';
 // Phase 22 semi-structured records: label/value blocks outside data tables, two-column label/value tables and
 // record sections under a heading. Markup is data; nothing is rendered or executed.
@@ -27,8 +27,8 @@ const VALUE = /^(?:record )?value$|^record$|^measurement$|^observed value$|^valo
 function headingBefore(parsed: ParsedHtml, at: number) { const h = parsed.headings.filter(h => h.span.start < at && at - h.span.end < RECORD_LIMITS.headingWindow).at(-1); return h ? { text: h.text, span: h.span } : null; }
 /** Label/value fields: <strong|b|label>Label</…> value inside li/p/dd/div blocks, and class-labelled sibling divs. */
 function blockFields(raw: string): (RecordField & { start: number })[] {
-    const out: (RecordField & { start: number })[] = [];
-    for (const block of raw.matchAll(/<(li|p|dd|td)\b[^>]*>((?:(?!<\/?(?:li|p|dd|td|ul|ol|table)\b)[\s\S]){1,900}?)<\/\1>/gi)) {
+    const out: (RecordField & { start: number })[] = [], active = staticMarkup(raw);
+    for (const block of active.matchAll(/<(li|p|dd|td)\b[^>]*>((?:(?!<\/?(?:li|p|dd|td|ul|ol|table)\b)[\s\S]){1,900}?)<\/\1>/gi)) {
         const inner = block[2], base = block.index! + block[0].indexOf(inner, block[1].length + 1), labels = [...inner.matchAll(/<(strong|b|label)\b[^>]*>([\s\S]{1,120}?)<\/\1>/gi)];
         for (const [i, l] of labels.entries()) {
             const label = text(l[2]), from = l.index! + l[0].length, to = labels[i + 1]?.index ?? inner.length, value = text(inner.slice(from, to).replace(/^\s*(?::|&nbsp;)+/, ''));
@@ -37,7 +37,7 @@ function blockFields(raw: string): (RecordField & { start: number })[] {
             out.push({ label, value, unit: null, span: span(raw, base + from, base + to), labelSpan: span(raw, base + l.index!, base + from), contextPath: block[1].toLowerCase() + '>' + l[1].toLowerCase(), start: base + l.index! });
         }
     }
-    for (const m of raw.matchAll(/<(div|span|dt)\b((?:[^>"']|"[^"]*"|'[^']*')*)>([\s\S]{1,160}?)<\/\1>\s*<(div|span|dd)\b((?:[^>"']|"[^"]*"|'[^']*')*)>([\s\S]{1,700}?)<\/\4>/gi)) {
+    for (const m of active.matchAll(/<(div|span|dt)\b((?:[^>"']|"[^"]*"|'[^']*')*)>([\s\S]{1,160}?)<\/\1>\s*<(div|span|dd)\b((?:[^>"']|"[^"]*"|'[^']*')*)>([\s\S]{1,700}?)<\/\4>/gi)) {
         const a = attributes('<x' + m[2] + '>'), b = attributes('<x' + m[5] + '>');
         if (!/(?:^|[\s_-])(?:label|field-label|field__label)(?:$|[\s_-])/i.test(a.class ?? '') || !/(?:item|value|content|field__item)/i.test(b.class ?? ''))
             continue;
@@ -59,7 +59,7 @@ function tableFields(grid: StructuredGrid): (RecordField & { start: number })[] 
 /** Splits a location value into subjects; enumerations, separators and explicit tie wording decide the semantics. */
 export function subjectsOf(value: string, context: string): { subjects: string[]; semantics: MultiSubjectSemantics } {
     const inline = value.split(/\s*(?=\(\s*[a-z]\s*\)\s)/i).map(s => s.trim()).filter(Boolean), lines = value.includes('\n') ? value.split('\n').map(s => s.trim()).filter(Boolean) : inline.length > 1 ? inline : [value.trim()], enumerated = /^\(?[a-z]\)\s*/i, parts = lines.length > 1 ? lines : value.split(/\s+\/\s+|;\s+|\s+&\s+|\s+and\s+/);
-    const subjects = [...new Set(parts.map(p => p.replace(enumerated, '').replace(/\[[^\]]*\]/g, '').split(',')[0].trim()).filter(p => /^[\p{Lu}][\p{L}\p{M}'’ .-]{1,60}$/u.test(p)))];
+    const subjects = [...new Set(parts.map(p => p.replace(enumerated, '').replace(/\[[^\]]*\]/g, '').split(',')[0].replace(/\s*\([^()]*\)\s*$/, '').trim()).filter(p => /^[\p{Lu}][\p{L}\p{M}'’ .-]{1,60}$/u.test(p)))];
     if (subjects.length <= 1)
         return { subjects, semantics: subjects.length ? 'SINGLE_SUBJECT' : 'UNKNOWN' };
     // Formatting ("A / B", "(a) A (b) B") never proves a tie; only explicit wording does.

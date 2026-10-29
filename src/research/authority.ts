@@ -1,5 +1,5 @@
 import type { SourceSpan } from '../semantics/contracts';
-import { attributes, cleanText, decodeEntities, jsonLdSummary, parseHtmlStructures } from './structured';
+import { attributes, cleanText, decodeEntities, staticMarkup, jsonLdSummary, parseHtmlStructures } from './structured';
 import { archivedOriginal } from './origins';
 import type { AuthorityAssessment, PublisherIdentity, SourceDocument, SourceType } from './contracts';
 // Phase 22 publisher identity and authority. Identity comes only from explicit statements in the snapshot
@@ -11,18 +11,18 @@ const ACADEMIC_LABEL = /(?:^|\.)(?:edu|ac)(?:\.[a-z]{2,3})?$/i;
 const GOV_NAME = /\b(?:bureau|ministry|department|agency|office|administration|commission|directorate|government|commonwealth|federal|state|national|meteorological|hydrometeorological|statistics|statistical|census|survey|service|institute)\b/i;
 const ACADEMIC_NAME = /\b(?:university|college|institute of technology|academy|école|universidad|universidade)\b/i;
 export const DOMAIN_VOCABULARY: Record<string, RegExp> = { TEMPERATURE: /meteorolog|weather|climat|hydromet|atmospher/i, POPULATION: /statistic|census|population|demograph/i };
-function sliceSpan(raw: string, start: number, text: string): SourceSpan { return { start, end: start + text.length, text }; }
+function sliceSpan(raw: string, start: number, text: string): SourceSpan { return { start, end: start + text.length, text: raw.slice(start, start + text.length) }; }
 export function publisherIdentity(doc: SourceDocument): PublisherIdentity {
-    const raw = doc.content, signals: PublisherIdentity['signals'] = [], head = raw.slice(0, 300000);
+    const raw = doc.content, active = staticMarkup(raw), signals: PublisherIdentity['signals'] = [], head = raw.slice(0, 300000);
     if (doc.contentType === 'text/html') {
         const parsed = parseHtmlStructures(head, null);
-        for (const n of jsonLdSummary(parsed.jsonLd)) {
+        for (const block of parsed.jsonLd) for (const n of jsonLdSummary([block])) {
             if (n.publisherTypes.length)
-                signals.push({ signal: 'JSONLD_PUBLISHER_TYPE', value: n.publisherTypes.join(','), span: parsed.jsonLd[0]?.span ?? null });
+                signals.push({ signal: 'JSONLD_PUBLISHER_TYPE', value: n.publisherTypes.join(','), span: block.span });
             if (n.type.some(t => /Organization$/.test(t)) && n.name)
-                signals.push({ signal: 'JSONLD_ORGANIZATION', value: n.name + ' [' + n.type.join(',') + ']', span: parsed.jsonLd[0]?.span ?? null });
+                signals.push({ signal: 'JSONLD_ORGANIZATION', value: n.name + ' [' + n.type.join(',') + ']', span: block.span });
         }
-        for (const m of head.matchAll(/<meta\b(?:[^>"']|"[^"]*"|'[^']*')*>/gi)) {
+        for (const m of active.slice(0, 300000).matchAll(/<meta\b(?:[^>"']|"[^"]*"|'[^']*')*>/gi)) {
             const a = attributes(m[0]), key = (a.name ?? a.property ?? '').toLowerCase(), content = cleanText(a.content ?? '');
             if (!content)
                 continue;
@@ -33,7 +33,7 @@ export function publisherIdentity(doc: SourceDocument): PublisherIdentity {
                 signals.push({ signal: 'META_DESCRIPTION_PRODUCED_BY', value: produced[1].trim(), span: sliceSpan(raw, m.index!, m[0]) });
         }
     }
-    const copyright = raw.slice(-200000).match(/(?:©|&copy;|\bcopyright\b)\s*(?:©|&copy;)?\s*(?:\d{4}(?:\s*[-–]\s*\d{4})?,?\s*)?(?:the\s+)?([A-Z][\w&'’ .,-]{2,100}?)(?:\.|\||<|,\s*all rights|\s*all rights|$)/i);
+    const copyright = active.slice(-200000).match(/(?:©|&copy;|\bcopyright\b)\s*(?:©|&copy;)?\s*(?:\d{4}(?:\s*[-–]\s*\d{4})?,?\s*)?(?:the\s+)?([A-Z][\w&'’ .,-]{2,100}?)(?:\.|\||<|,\s*all rights|\s*all rights|$)/i);
     if (copyright) {
         const at = raw.length - Math.min(raw.length, 200000) + copyright.index!;
         signals.push({ signal: 'COPYRIGHT', value: cleanText(decodeEntities(copyright[1])).slice(0, 120), span: sliceSpan(raw, at, copyright[0]) });

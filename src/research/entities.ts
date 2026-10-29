@@ -24,11 +24,11 @@ export function buildEntityGraph(sources: SourceDocument[], candidates: FactCand
     const edge = (from: string, to: string, relation: EntityRelationType, sourceId: string | null, span: Evidence['sourceSpan'] | null, reason: string) => { if (from === to)
         return; const raw = { from, to, relation, sourceId, span, reason }; edges.push({ id: 'EE_' + jsonHash(raw).slice(0, 16), ...raw }); };
     const byEvidence = new Map(evidence.map(e => [e.id, e]));
-    for (const c of candidates) {
+    for (const c of [...candidates].sort((a, b) => a.id.localeCompare(b.id, 'en'))) {
         const e = byEvidence.get(c.evidenceIds[0]);
         node(c.canonicalFact.subject, c.canonicalFact.subjectKind === 'STATION' ? 'STATION' : 'PLACE', e?.sourceId ?? null, c.canonicalFact.subjectKind === 'STATION' ? 'Fact subject from an observation-site label/heading' : 'Fact subject');
     }
-    for (const ctx of contexts) {
+    for (const ctx of [...contexts].sort((a, b) => a.sourceId.localeCompare(b.sourceId, 'en'))) {
         if (ctx.resolved)
             node(ctx.resolved.name, ctx.resolved.entityKind, ctx.sourceId, 'Document context ' + ctx.resolved.sourceKinds.join('+'));
         for (const c of ctx.candidates.filter(c => c.sourceKind === 'LEAD' && c.sourceSpan && /\b(?:town|city|village|hamlet|settlement|locality|municipality|community)\b/i.test(c.sourceSpan.text)))
@@ -37,7 +37,7 @@ export function buildEntityGraph(sources: SourceDocument[], candidates: FactCand
     const places = [...nodes.values()].filter(n => n.kind !== 'STATION'), stations = [...nodes.values()].filter(n => n.kind === 'STATION');
     // Data attribution: a place's measurement whose citation is the station's own document, with overlapping names.
     const stationDoc = new Map<string, { node: EntityGraph['nodes'][number]; sourceId: string }>();
-    for (const ctx of contexts.filter(c => c.resolved?.entityKind === 'STATION')) {
+    for (const ctx of contexts.filter(c => c.resolved?.entityKind === 'STATION').sort((a, b) => a.sourceId.localeCompare(b.sourceId, 'en'))) {
         const s = sources.find(x => x.id === ctx.sourceId), n = nodes.get(nodeId(entityKey(ctx.resolved!.name, 'STATION')));
         if (s && n)
             for (const l of sourceLocators(s))

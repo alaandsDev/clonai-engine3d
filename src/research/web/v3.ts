@@ -81,7 +81,7 @@ export function candidateEntityPool(pack: EvidencePack, plan: ResearchPlan, sear
 }
 // ---------- corroboration tasks ----------
 /** One task per relevant single-origin fact: search for a second origin while excluding the known origin chain. */
-export function corroborationTasks(pack: EvidencePack, plan: ResearchPlan, pool: CandidateEntity[], attempts: { seedFactId: string | null }[] = []): CorroborationTask[] {
+export function corroborationTasks(pack: EvidencePack, plan: ResearchPlan, pool: CandidateEntity[], attempts: { seedFactId: string | null; independence?: DiscoveryIndependence }[] = []): CorroborationTask[] {
     const c = plan.request.constraints ?? {}, v = vocabulary(plan), ranking = plan.request.researchGoal === 'RANKING', priority = new Map(pool.map(p => [normalize(p.canonicalName), p.priority]));
     const relevant = (f: GroundedFact) => ranking ? f.factType === 'MEASUREMENT' && f.qualifiers.includes(c.qualifier ?? '') || f.factType === 'RESIDENCY' && f.canonicalFact.residency === c.residencyCriterion : f.factType === 'QUANTITY' || f.factType === 'MEASUREMENT';
     const tasks = pack.groundedFacts.filter(f => relevant(f) && f.status === 'INSUFFICIENT' && f.independentOriginCount >= 1).map(f => {
@@ -94,13 +94,16 @@ export function corroborationTasks(pack: EvidencePack, plan: ResearchPlan, pool:
         }
         const entity = f.canonicalFact.subject, text = entity + ' ' + (f.factType === 'RESIDENCY' ? v.residency : v.record), resolved = f.usableForPrimaryClaim;
         const raw = { factKey: f.id, entity, metric: f.canonicalFact.metric, qualifier: f.factType === 'RESIDENCY' ? f.canonicalFact.residency : f.qualifiers[0] ?? null, knownOrigins: [...new Set(ev.map(e => e.originGroupId ?? ''))].filter(Boolean).sort(), excludedOrigins: [...domains].sort(), preferredSourceTypes: ['PRIMARY_OFFICIAL', 'PRIMARY_DATASET', 'INSTITUTIONAL', 'ACADEMIC'], queries: [{ provider: 'OPENALEX_ACADEMIC_SEARCH', text, purpose: 'CORROBORATION_DISCOVERY' as const }, { provider: 'CROSSREF_WORKS_SEARCH', text, purpose: 'CORROBORATION_DISCOVERY' as const }, { provider: 'WIKIDATA_ENTITY_DISCOVERY', text: entity, purpose: 'OFFICIAL_SOURCE_DISCOVERY' as const }], priority: priority.get(normalize(entity)) ?? 0, budget: 2 };
-        return { id: 'CT_' + jsonHash(raw).slice(0, 16), ...raw, status: resolved ? 'RESOLVED' as const : attempts.some(a => a.seedFactId === f.id) ? 'ATTEMPTED' as const : 'PENDING' as const };
+        const spent = attempts.filter(a => a.seedFactId === f.id && (a.independence === 'CORPUS_INDEPENDENT' || a.independence === 'QUERY_INDEPENDENT')).length;
+        return { id: 'CT_' + jsonHash(raw).slice(0, 16), ...raw, status: resolved ? 'RESOLVED' as const : spent >= raw.budget ? 'EXHAUSTED' as const : spent ? 'ATTEMPTED' as const : 'PENDING' as const };
     });
     return tasks.sort((a, b) => b.priority - a.priority || a.id.localeCompare(b.id, 'en')).slice(0, 24);
 }
 // ---------- publisher links (official sources only) ----------
 /** Same-publisher data links in an official snapshot (dataset files or full-statistics pages for the same subject). Never guessed endpoints. */
 export function publisherLinks(source: SourceInput, subject: string, max: number): { url: string; text: string }[] {
+    if (max <= 0)
+        return [];
     const out: { url: string; text: string }[] = [], domain = registrableDomain(new URL(source.canonicalLocator).hostname);
     for (const m of source.content.matchAll(/<a\b((?:[^>"']|"[^"]*"|'[^']*')*)>([\s\S]{0,200}?)<\/a>/gi)) {
         const a = attributes('<a' + m[1] + '>'), text = cleanText(m[2].replace(/<[^>]*>/g, ' '));
@@ -232,13 +235,16 @@ export async function runWebResearchV3(request: ResearchRequest, config: WebRese
         pack = buildEvidencePack(request, fetcher);
         // R4 independent corroboration: second-origin search excluding the known origin chain.
         const tasks = corroborationTasks(pack, plan, candidateEntityPool(pack, plan, results, queries), discovery);
-        for (const t of tasks.filter(t => t.status === 'PENDING').slice(0, 6))
+        const taskSpent = (id: string) => discovery.filter(d => d.seedFactId === id && (d.independence === 'CORPUS_INDEPENDENT' || d.independence === 'QUERY_INDEPENDENT')).length;
+        for (const t of tasks.filter(t => t.status === 'PENDING' || t.status === 'ATTEMPTED').slice(0, 6))
             for (const q of t.queries) {
-                if (stageOf('CORROBORATION').used >= stageOf('CORROBORATION').budget || global() || !v.strategies.includes(q.provider as DiscoveryStrategy))
+                if (taskSpent(t.factKey) >= t.budget || stageOf('CORROBORATION').used >= stageOf('CORROBORATION').budget || global() || !v.strategies.includes(q.provider as DiscoveryStrategy))
                     continue;
                 const found = await search(q.provider as DiscoveryStrategy, query(plan, round, q.purpose, q.text, { entityName: t.entity, factId: t.factKey, derivedFrom: t.id, targetGap: 'CORROBORATION', excludedOrigins: t.excludedOrigins }), 2), cs = candidateSources(found, queries, config);
                 strategyLog.get(q.provider as DiscoveryStrategy) && (strategyLog.get(q.provider as DiscoveryStrategy)!.candidates += cs.length);
                 for (const c of cs) {
+                    if (taskSpent(t.factKey) >= t.budget)
+                        break;
                     if (t.excludedOrigins.includes(registrableDomain(c.domain))) {
                         diagnostics.push('CORROBORATION_EXCLUDED_KNOWN_ORIGIN ' + c.canonicalUrl);
                         continue;

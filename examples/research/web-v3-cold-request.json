@@ -1,0 +1,94 @@
+{
+  "request": {
+    "version": 1,
+    "id": "real-cold-places-v3",
+    "topic": "Os cinco lugares mais frios onde pessoas vivem permanentemente.",
+    "language": "pt-BR",
+    "researchGoal": "RANKING",
+    "desiredFactTypes": [
+      "MEASUREMENT",
+      "RESIDENCY",
+      "RANKING"
+    ],
+    "constraints": {
+      "metric": "TEMPERATURE",
+      "qualifier": "MINIMUM_RECORDED",
+      "residencyCriterion": "PERMANENT_POPULATION",
+      "rankingCount": 5
+    },
+    "sourcePolicy": {
+      "minIndependentSources": 2,
+      "minPrimaryQuality": "MEDIUM",
+      "allowEnglishExtraction": true,
+      "maxSourceBytes": 2097152,
+      "maxTotalSourceBytes": 33554432,
+      "maxNormalizedCharacters": 524288,
+      "researchVersion": 3,
+      "factTypeQuorum": {
+        "MEASUREMENT": {
+          "minIndependentOrigins": 2,
+          "singleOriginAuthority": {
+            "sourceTypes": [
+              "PRIMARY_OFFICIAL",
+              "PRIMARY_DATASET"
+            ],
+            "minGrade": "HIGH"
+          }
+        },
+        "RESIDENCY": {
+          "minIndependentOrigins": 2,
+          "singleOriginAuthority": {
+            "sourceTypes": [
+              "PRIMARY_OFFICIAL",
+              "INSTITUTIONAL"
+            ],
+            "minGrade": "HIGH"
+          }
+        }
+      },
+      "evaluationDate": "2026-10-28",
+      "residencyMaxAgeYears": 15,
+      "observationSitePolicy": "SOURCED_OBSERVATION_SITE"
+    },
+    "maxSources": 32,
+    "maxEvidenceItems": 256
+  },
+  "web": {
+    "enabled": true,
+    "maxResearchRounds": 4,
+    "maxQueries": 48,
+    "maxResultsPerQuery": 4,
+    "maxSearchResults": 120,
+    "maxCandidateSources": 48,
+    "maxFetchedSources": 48,
+    "maxSourcesPerDomain": 14,
+    "maxBytesPerSource": 2097152,
+    "maxTotalBytes": 33554432,
+    "maxDurationMs": 600000,
+    "requestTimeoutMs": 30000,
+    "respectRobots": true,
+    "officialDomainHints": [],
+    "allowSessionScopeAdjustment": true,
+    "v2": {
+      "strategies": [
+        "MEDIAWIKI_REFERENCE_SEARCH",
+        "REFERENCE_FOLLOWING",
+        "WIKIDATA_ENTITY_DISCOVERY",
+        "OPENALEX_ACADEMIC_SEARCH",
+        "CROSSREF_WORKS_SEARCH",
+        "PUBLISHER_LINK_FOLLOWING"
+      ],
+      "budgets": {
+        "broadDiscovery": 8,
+        "originDiscovery": 18,
+        "verification": 8,
+        "corroboration": 10,
+        "entityExpansion": 4
+      },
+      "maxReferencesPerSource": 6,
+      "candidatePoolTarget": 15,
+      "maxDatasetBytes": 8388608,
+      "maxPublisherLinksPerSource": 2
+    }
+  }
+}

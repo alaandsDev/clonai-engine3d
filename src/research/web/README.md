@@ -30,3 +30,22 @@ npm run research:web -- examples/research/web-v2-cold-request.json out/engine3d/
 npm run research:web:replay -- out/engine3d/phase21/logs/real-cold-places-v2.json out/engine3d/phase21
 npm run check:research-v2
 ```
+
+# Web research v3 (Phase 22)
+
+Use `researchVersion: 3` and `web.v2` budget configuration. R0 broad discovery, R1 entity expansion, R2 verification, R3 references/publisher links and R4 independent corroboration repeat through a bounded R5 follow-up cycle. R5 is a loop phase, not a separate network provider. Free MediaWiki, Wikidata, OpenAlex and Crossref adapters share the secure HTTP boundary. Publisher links remain same-publisher discovery paths and do not create independent origins.
+
+`CandidateEntityPool` ranks source-backed gaps, keeping search-only titles and observation sites separate. Purpose-tagged `CorroborationTask` queries exclude known origins and enforce their per-task fetch budget. A reference-derived attempt cannot discharge a task that requires independent discovery. Independently discovered sources can still be derivative evidence; SourceGraph and per-fact origin roots decide corroboration.
+
+Bounded CSV/TSV ingestion hashes and records the full downloaded payload before retaining a header plus candidate rows. `metadata.partial` records original byte count/hash, selection rule and row counts; evidence offsets refer to the retained partial snapshot. This does not implement truncation of oversized HTML. Unsupported languages, JavaScript requirements, anti-bot pages and PDF references produce diagnostics. PDFs are not downloaded or interpreted, and browser scripts are not executed.
+
+The saved `v3` session view includes pool/tasks/discovery provenance and fingerprints. Replay blocks no errors by falling back to stored conclusions: it rebuilds pool/tasks, context, graph, evidence, facts, ranking and writer, and rejects fingerprint/content mismatches. `research-v3-audit.ts` additionally disables HTTP, HTTPS, fetch, DNS and transport while replaying saved sessions. Its strict R3 gate compares the same canonical fact with an earlier INSUFFICIENT state; the runtime `R3_ADMITTED_FACT` field alone only indicates an admitted fact.
+
+```powershell
+npm run research:web -- examples/research/web-v3-cold-request.json out/engine3d/phase22
+npm run research:web -- examples/research/web-v3-population-request.json out/engine3d/phase22
+npm run research:web:replay -- out/engine3d/phase22/logs/real-cold-places-v3.json out/engine3d/phase22
+npx tsx cli/research-v3-audit.ts out/engine3d/phase22
+```
+
+`saveResearchArtifacts` writes 13 v3 JSON views and nine escaped Markdown review views. The audit combines both benchmark reviews and writes comparison, strict gates, replay, anti-hardcode, security, timing and registry/video integrity reports. Real benchmarks are live observations; cached replay and old-snapshot development observations are labelled separately. Research readiness, writer realization and rendering remain distinct gates.

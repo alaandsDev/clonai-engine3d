@@ -1,8 +1,8 @@
 import { jsonHash } from '../editorial/fingerprint';
 import { normalize } from '../semantics/normalize';
 import type { SourceSpan } from '../semantics/contracts';
-import { documentSubject, jsonLdSummary, titleSubject, type InheritedSubject, type ParsedHtml, type StructuredGrid } from './structured';
-import { isLocationLabel, type RecordDraft } from './records';
+import { documentSubject, jsonLdSummary, staticMarkup, titleSubject, type InheritedSubject, type ParsedHtml, type StructuredGrid } from './structured';
+import { isLocationLabel, subjectsOf, type RecordDraft } from './records';
 import type { DocumentContextSummary, DocumentSubjectCandidate, SourceDocument, SubjectSource } from './contracts';
 // Phase 22 DocumentContext: explicit page context beyond the cell. Subject inheritance is allowed only when every
 // document-level signal names the same entity; a page naming several places/stations makes tables abstain.
@@ -31,7 +31,7 @@ export function buildDocumentContext(doc: SourceDocument, parsed: ParsedHtml, re
     const raw = doc.content, candidates: DocumentSubjectCandidate[] = [];
     const add = (name: string, span: SourceSpan | null, sourceKind: SubjectSource | 'URL_HINT', entityKind: 'STATION' | 'PLACE', confidence: DocumentSubjectCandidate['confidence'], reason: string) => { const trimmed = name.trim(); if (trimmed && trimmed.length <= 80)
         candidates.push({ text: trimmed, normalizedText: normalize(trimmed).replace(/\s+/g, ' '), sourceSpan: span, sourceKind, entityKind, confidence, entityCandidateId: 'EC_' + jsonHash(normalize(trimmed).replace(/\s+/g, ' ') + '|' + entityKind).slice(0, 16), reason }); };
-    const titleRaw = raw.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i), title = titleRaw ? titleRaw[1].replace(/<[^>]*>/g, '').trim() : null;
+    const titleRaw = staticMarkup(raw).match(/<title\b[^>]*>([\s\S]*?)<\/title>/i), title = titleRaw ? titleRaw[1].replace(/<[^>]*>/g, '').trim() : null;
     const titled = title ? headingSubject(title) : null;
     if (titled && titleRaw)
         add(titled.name, { start: titleRaw.index!, end: titleRaw.index! + titleRaw[0].length, text: titleRaw[0] }, 'DOCUMENT_TITLE', titled.kind, 'MEDIUM', 'Page title names a data subject');
@@ -42,14 +42,14 @@ export function buildDocumentContext(doc: SourceDocument, parsed: ParsedHtml, re
     }
     for (const r of records)
         for (const f of r.record.fields.filter(f => isLocationLabel(f.label)))
-            if (r.record.semantics === 'SINGLE_SUBJECT' || r.record.semantics === 'UNKNOWN')
-                add(f.value.split('\n')[0].replace(/\s*\(.*$/, '').split(',')[0], f.span, 'DOCUMENT_LABEL', /\b(?:site|station)\b/i.test(f.label) ? 'STATION' : 'PLACE', 'HIGH', 'Explicit label "' + f.label + '"');
+            for (const name of subjectsOf(f.value, r.record.heading ?? '').subjects)
+                add(name, f.span, 'DOCUMENT_LABEL', /\b(?:site|station)\b/i.test(f.label) ? 'STATION' : 'PLACE', 'HIGH', 'Explicit label "' + f.label + '"');
     const lead = documentSubject(doc, parsed);
     if (lead)
         add(lead.name, lead.spans[1] ?? lead.spans[0], 'LEAD', /\b(?:research station|weather station|scientific station)\b/i.test(lead.spans[1]?.text ?? '') ? 'STATION' : 'PLACE', 'HIGH', 'Heading plus lead stating a populated place or station');
-    for (const node of jsonLdSummary(parsed.jsonLd))
+    for (const block of parsed.jsonLd) for (const node of jsonLdSummary([block]))
         if (node.name && node.type.some(t => /^(?:Place|City|AdministrativeArea|Landform|Accommodation)$/.test(t)))
-            add(node.name, parsed.jsonLd[0]?.span ?? null, 'METADATA', 'PLACE', 'MEDIUM', 'JSON-LD Place name (supporting metadata)');
+            add(node.name, block.span, 'METADATA', 'PLACE', 'MEDIUM', 'JSON-LD Place name (supporting metadata)');
     // URL path tokens are supporting hints only and never decide a subject.
     const path = (() => { try {
         return decodeURIComponent(new URL(doc.canonicalLocator).pathname);
@@ -70,7 +70,7 @@ export function buildDocumentContext(doc: SourceDocument, parsed: ParsedHtml, re
         // Local heading of the section containing the structure.
         const local = parsed.headings.filter(h => h.span.end <= start).at(-1), localSubject = local ? headingSubject(local.text) : null;
         if (localSubject && (!names.length || names.includes(normalize(localSubject.name).replace(/\s+/g, ' '))))
-            return { name: localSubject.name, kind: localSubject.kind, source: 'SECTION_HEADING', spans: [local!.span] };
+            return { name: localSubject.name, kind: decisive.some(c => c.normalizedText === normalize(localSubject.name).replace(/\s+/g, ' ') && c.entityKind === 'STATION') ? 'STATION' : localSubject.kind, source: 'SECTION_HEADING', spans: [local!.span, ...decisive.filter(c => c.normalizedText === normalize(localSubject.name).replace(/\s+/g, ' ') && c.entityKind === 'STATION').map(c => c.sourceSpan).filter((s): s is SourceSpan => Boolean(s))] };
         if (!resolved)
             return ambiguity ? { ambiguity } : null;
         const support = decisive.filter(c => c.normalizedText === names[0]), top = best(support);

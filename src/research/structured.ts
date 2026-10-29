@@ -5,6 +5,10 @@ import type { CanonicalFact, Quantity, ResearchPolicy, Residency, SourceDocument
 // Phase 21 structured extraction. Markup is tokenized as data; nothing is executed, fetched or rendered.
 // Every value keeps a raw-content span; headers, captions and subjects keep their own spans.
 export const STRUCTURED_LIMITS = { maxTablesPerSource: 64, maxRowsPerTable: 400, maxColumnsPerTable: 40, maxSpan: 40, maxCellChars: 2000, maxListsPerSource: 128, maxItemsPerList: 300, maxDefinitionListsPerSource: 64, maxDatasetRows: 5000, maxDatasetColumns: 64, maxJsonLdBlocks: 4, maxJsonLdBytes: 65536, maxJsonLdDepth: 8, maxCitationsPerEvidence: 12, maxFragmentChars: 20000 };
+/** v3 regex-based readers use this offset-preserving view; hidden markup cannot supply facts or publisher declarations. */
+export function staticMarkup(raw: string): string {
+    return raw.replace(/<!--[\s\S]*?(?:-->|$)|<(script|style|nav|aside|iframe|noscript)\b[^>]*>[\s\S]*?(?:<\/\1\s*>|$)/gi, match => ' '.repeat(match.length));
+}
 export interface StructuredCell {
     text: string;
     span: SourceSpan;
@@ -404,6 +408,8 @@ export function temperatureQualifiers(label: string): { qualifiers: string[]; su
         return { qualifiers: [], supported: false, reason: 'STATISTIC_NOT_SUPPORTED day count' };
     if (/\b\d{1,2}\s?(?:am|pm)\b|\bat \d{1,2}(?::\d\d)?\b/.test(n))
         return { qualifiers: [], supported: false, reason: 'STATISTIC_NOT_SUPPORTED time-of-day mean' };
+    if (recordLow && /\b(?:mean|average|avg)\b|\bmedia\b/.test(n))
+        return { qualifiers: [], supported: false, reason: 'STATISTIC_NOT_SUPPORTED average of record extrema' };
     if (recordLow)
         return { qualifiers: [satellite ? 'SATELLITE_ESTIMATE' : surface ? 'SURFACE_TEMPERATURE_MINIMUM' : 'MINIMUM_RECORDED'], supported: true, reason: satellite || surface ? 'Surface/satellite minimum kept apart from recorded air minimum' : 'Explicit record-low label' };
     if (/monthly min|mean monthly minimum|minima mensal/.test(n))

@@ -54,3 +54,15 @@ Limites: linguagem/source formats fechados, normalização HTML limitada, qualid
 ```powershell
 npm run check:research-v2
 ```
+
+## Research v3 (Phase 22)
+
+Opt in with `sourcePolicy.researchVersion: 3`. V1 and v2 remain opt out. `DocumentContext` resolves a subject from offset-preserving data headings and label/value records before a table inherits it. Missing or competing subjects abstain. Every inherited subject, heading, label and value retains its exact snapshot span. Broad section labels are distinct from hierarchical headers. Semi-structured records preserve alternative subjects without producing individual facts; explicitly shared records generate distinct evidence IDs per subject.
+
+`EntityGraph` keeps stations distinct from settlements. Only explicit source-backed `OBSERVATION_SITE_FOR` relations may supply a place measurement under `SOURCED_OBSERVATION_SITE`; the default `SAME_ENTITY_ONLY` policy does not. The station fact and its identity remain intact. Proximity, JSON-LD alternate names (`SUPPORTED_ALIAS`) and transliteration (`CANDIDATE_ALIAS`) do not merge identities. Publisher identity, domain-compatible authority, source quality and evidence independence are separate assessments. A government-like TLD alone is insufficient. V3 near-copy detection joins prose origins conservatively; structured rows are excluded from that heuristic.
+
+V3 preserves document contexts, structured records, publisher identities, authority assessments, an entity graph and eligibility checklists in `pack.v3`. Unsupported maximum/day-count/time-of-day/averaged-extreme statistics abstain; averages never become recorded minima. Script/style/navigation/comment content cannot provide record fields or publisher authority. These are bounded literal parsers, not universal document understanding or publisher authentication.
+
+```powershell
+npm run check:research-v3
+```

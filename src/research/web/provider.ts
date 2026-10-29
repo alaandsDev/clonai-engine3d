@@ -154,7 +154,7 @@ export function replayWebResearch(session: ResearchSession): ResearchSession {
         throw Error('REPLAY_PROCESSING_MISMATCH');
     // v3: CandidateEntityPool and CorroborationTasks are recomputed from the rebuilt pack and recorded discovery data.
     const v3 = session.v3 ? sessionV3(pack, session.plan, session.searchResults, session.queryPlan, session.v3.discovery, session.v2!) : undefined;
-    if (v3 && (v3.fingerprints.candidateEntityPool !== session.v3!.fingerprints.candidateEntityPool || v3.fingerprints.corroborationTasks !== session.v3!.fingerprints.corroborationTasks))
+    if (v3 && (v3.fingerprints.candidateEntityPool !== session.v3!.fingerprints.candidateEntityPool || v3.fingerprints.corroborationTasks !== session.v3!.fingerprints.corroborationTasks || jsonHash(session.v3!.candidateEntityPool) !== session.v3!.fingerprints.candidateEntityPool || jsonHash(session.v3!.corroborationTasks) !== session.v3!.fingerprints.corroborationTasks))
         throw Error('REPLAY_V3_MISMATCH candidate pool / corroboration tasks');
     const result = { ...raw, mode: 'CACHED_REPLAY' as const, EvidencePack: pack, writer, scope, quality: { ...session.quality, liveOrReplay: 'CACHED_REPLAY' }, ...(v3 ? { v3 } : {}), processingFingerprint: processed };
     return { ...result, fingerprint: jsonHash(result) };

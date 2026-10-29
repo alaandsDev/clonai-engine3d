@@ -52,7 +52,8 @@
     "research:web:inspect": "tsx cli/web-research.ts inspect",
     "check:web-research": "tsx --test tests/web-research.test.ts",
     "check:research-v2": "tsx --test tests/research-v2.test.ts",
-    "research:v2:audit": "tsx cli/research-v2-audit.ts"
+    "research:v2:audit": "tsx cli/research-v2-audit.ts",
+    "check:research-v3": "tsx --test tests/research-v3.test.ts"
   },
   "dependencies": {
     "@react-three/fiber": "8.18.0",
