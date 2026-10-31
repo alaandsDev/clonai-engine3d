@@ -1,7 +1,7 @@
 import {jsonHash} from '../editorial/fingerprint';
 import type {PlannerInput,VisualCausalPlan} from './contracts';
 import {planVisualCausal} from './planner';
-const INVERSE:Record<string,string[]>={visible:['HIDE','DISAPPEAR'],flowProgress:[],connection:['SEPARATE'],fillLevel:['DECREASE'],groundCutaway:['DECREASE'],y:['MOVE']};
+const INVERSE:Record<string,string[]>={visible:['HIDE','DISAPPEAR'],flowProgress:[],connection:['SEPARATE'],fillLevel:['DECREASE'],groundCutaway:['DECREASE'],y:['MOVE'],x:['MOVE'],openness:['ROTATE','MOVE'],activity:['DECREASE']};
 /** Adversarial plan checks: grounded vs editorial, proof legitimacy, world/presenter identity,
  * state regressions. Returns every issue; an empty list means the plan is admissible. */
 export function validateVisualPlan(plan:VisualCausalPlan,relationIds:string[]){
@@ -23,6 +23,9 @@ export function validateVisualPlan(plan:VisualCausalPlan,relationIds:string[]){
   if(factual&&!b.proof)issues.push('FACTUAL_BEAT_WITHOUT_PROOF_ASSESSMENT:'+b.id);
   if(b.proof&&['DIRECT','PARTIAL'].includes(b.proof.level)){
    const acting=b.operations.filter(o=>o.operation!=='HIGHLIGHT'&&o.target!=='ENVIRONMENT').map(o=>entities.get(o.target));
+   // An observed operation is acting only if its basis exists: an earlier sustained step on the same target, or an initial state set by this beat's relation.
+   for(const o of b.operations.filter(o=>o.observed)){const earlier=plan.beats.some(x=>x.startFrame<b.startFrame&&x.operations.some(y=>!y.observed&&y.operation===o.operation&&y.target===o.target&&(y.sustain||(y.operation==='FLOW'&&y.parameters.to===1)))),initial=entities.get(o.target)?.initialStateFrom;
+    if(o.observed==='SUSTAINED_STEP'?!earlier:!(initial&&b.relationIds.includes(initial)))issues.push('OBSERVED_WITHOUT_BASIS:'+b.id+':'+o.target);}
    if(!acting.some(e=>e&&e.grounding==='FACTUAL'&&e.relationIds.some(r=>b.relationIds.includes(r))))issues.push('PROOF_WITHOUT_FACTUAL_ACTION:'+b.id);
   }
   for(const o of b.operations)if(o.target!=='ENVIRONMENT'&&!entities.has(o.target))issues.push('UNKNOWN_TARGET:'+b.id+':'+o.target);

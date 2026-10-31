@@ -29,6 +29,10 @@ export interface ResearchPolicy {
     mechanismVersion?: 2;
     /** Phase26B conservative contextual recovery; absent preserves Phase26 goldens. */
     contextualMechanisms?: true;
+    /** Phase28: grounded question/progression planning over the same v4 evidence. */
+    progressiveStory?: true;
+    /** Phase28B bounded parser/retrieval opt-in; absent preserves Phase28. */
+    contextualParser?: 1;
 }
 export interface FactTypeQuorum {
     minIndependentOrigins: number;
@@ -193,7 +197,7 @@ export interface Evidence {
     extractionMethod: 'MECHANISM_V2' | 'MECHANISM_PT_V1' | 'LITERAL_PT_V1' | 'TABLE_PT_V1' | 'LITERAL_EN_V1' | 'LITERAL_EN_V2' | 'TABLE_HTML_V2' | 'LIST_HTML_V2' | 'DEFINITION_HTML_V2' | 'KEY_VALUE_HTML_V2' | 'DATASET_V2' | 'RECORD_HTML_V3';
     evidenceLanguage?: 'en';
     contextSpans?: SourceSpan[];
-    mechanismContext?: {kind:'EXPLICIT_RELATION'|'CONTEXT_RESOLVED_RELATION';documentId:string;paragraphIndex:number;sentenceIndex:number;supportingSpans:SourceSpan[];cleaningRules:string[]};
+    mechanismContext?: {kind:'EXPLICIT_RELATION'|'CONTEXT_RESOLVED_RELATION';documentId:string;paragraphIndex:number;sentenceIndex:number;supportingSpans:SourceSpan[];cleaningRules:string[];parse?:import('./mechanism-parser').MechanismParseProof};
     contentHash: string;
     table: {
         row: number;

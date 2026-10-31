@@ -8,6 +8,7 @@ import {parseHtmlStructures} from './structured';
 import {topicSubject} from '../topic/subject';
 import type {CanonicalFact,Evidence,FactCandidate,ResearchPlan,SourceDocument} from './contracts';
 import {cleanMechanismActor,localMechanismClauses,contextualSafetyRefusal,unsupportedSentenceRank} from './mechanism-clauses';
+import {parseMechanismSentence,type MechanismParseProof} from './mechanism-parser';
 
 export const CONTEXTUAL_MECHANISM_VERSION='contextual-mechanism/1.0.0';
 /** Annotation masking preserves UTF-16 offsets. Only explicit citation and
@@ -65,13 +66,32 @@ export function extractContextualMechanisms(s:SourceDocument,plan:ResearchPlan){
   const scope=contextualWindowScope(s,plan,window,documentScope);if(!scope.allowed)continue;
   if(!unsupportedSentenceRank(window.text))for(const match of mechanismFactsV2(window.text))if(safe(match.fact))addContextFact({...match.fact,subject:cleanMechanismActor(match.fact.subject)},window,scope.context,'EXPLICIT_RELATION');
   for(const relation of localMechanismClauses(window.text))addContextFact(relation.fact,{...window,text:relation.text},scope.context,relation.resolution);
+  if(plan.policy.contextualParser===1){
+   const parsed=parseMechanismSentence(window.text);
+   if(parsed.candidates.some(c=>c.parse.route)){
+    // The new roles replace an unsplit movement surface at this exact span,
+    // not historical output or unrelated relations. No double-counting a route.
+    const actors=new Set(parsed.candidates.filter(c=>c.parse.route).map(c=>normalize(c.fact.subject)));
+    for(let i=evidence.length-1;i>=0;i--)if(evidence[i].sourceSpan.start===window.span.start&&['FLOW','PASSES_THROUGH','MOVE','ENTER','EXIT'].includes(evidence[i].supports.predicate)&&actors.has(normalize(evidence[i].supports.subject))){const [old]=evidence.splice(i,1);for(let j=candidates.length-1;j>=0;j--)if(candidates[j].evidenceIds.includes(old.id))candidates.splice(j,1);}
+   }
+   for(const c of parsed.candidates)addContextFact(c.fact,window,[...scope.context,window.paragraphSpan],'CONTEXT_RESOLVED_RELATION',c.parse);
+  }
  }
- function addContextFact(fact:CanonicalFact,w:MechanismWindow,context:SourceSpan[],kind:'EXPLICIT_RELATION'|'CONTEXT_RESOLVED_RELATION'){
+ function addContextFact(fact:CanonicalFact,w:MechanismWindow,context:SourceSpan[],kind:'EXPLICIT_RELATION'|'CONTEXT_RESOLVED_RELATION',parse?:MechanismParseProof){
   const norm=(s:string)=>normalize(s).replace(/^(?:o|a|os|as|um|uma|the|an)\s+/,'').trim();
   const flowArg=(s:string)=>norm(s.replace(/^(?:por|pelo|pela|através de|through)\s+/i,''));
   if(evidence.some(e=>{const flow=['FLOW','PASSES_THROUGH'].includes(e.supports.predicate)&&['FLOW','PASSES_THROUGH'].includes(fact.predicate);return e.sourceSpan.start===w.span.start&&(e.supports.predicate===fact.predicate||flow)&&norm(e.supports.subject)===norm(fact.subject)&&(flow?flowArg(e.supports.object??'')===flowArg(fact.object??''):norm(e.supports.object??'')===norm(fact.object??''));}))return;
-  const supportingSpans=[w.span,...context,...(w.heading?[w.heading.span]:[])].filter((x,i,a)=>a.findIndex(y=>x.start===y.start&&x.end===y.end)===i);
-  const raw={version:1 as const,id:'EV_'+jsonHash({source:s.id,hash:s.contentHash,span:w.span,fact,context:supportingSpans,version:CONTEXTUAL_MECHANISM_VERSION}).slice(0,20),sourceId:s.id,sourceSpan:w.span,exactText:w.span.text,normalizedText:w.text,evidenceType:fact.factType,supports:fact,extractionConfidence:'MEDIUM' as const,truthStatus:'EXTRACTED' as const,extractionMethod:'MECHANISM_V2' as const,contentHash:s.contentHash,table:null,contextSpans:supportingSpans.slice(1),mechanismContext:{kind,documentId:s.id,paragraphIndex:w.paragraphIndex,sentenceIndex:w.sentenceIndex,supportingSpans,cleaningRules:w.cleaningRules}};
+  let rawParse:MechanismParseProof|undefined;
+  if(parse){
+   let lo=s.normalized.mapping.findIndex(m=>m.end>w.span.start),hi=lo;while(hi<s.normalized.mapping.length&&s.normalized.mapping[hi].start<w.span.end)hi++;
+   const view=mechanismTextView(s.normalized.text.slice(lo,hi)).masked,map:number[]=[],parts:string[]=[];
+   for(const m of view.matchAll(/\S+/g)){if(parts.length){parts.push(' ');map.push(lo+m.index!-1);}parts.push(m[0]);for(let j=0;j<m[0].length;j++)map.push(lo+m.index!+j);}
+   if(parts.join('')!==w.text)throw Error('CONTEXTUAL_PARSE_OFFSET_ALIGNMENT');
+   const convert=(p:{start:number;end:number;text:string})=>sourceSpan(s,map[p.start],map[p.end-1]+1);
+   rawParse={...parse,subject:convert(parse.subject),trigger:convert(parse.trigger),argument:convert(parse.argument),qualifiers:parse.qualifiers.map(q=>({...q,span:convert(q.span)}))};
+  }
+  const supportingSpans=[w.span,...context,...(w.heading?[w.heading.span]:[]),...(rawParse?[rawParse.subject,rawParse.trigger,rawParse.argument,...rawParse.qualifiers.map(q=>q.span)]:[])].filter((x,i,a)=>a.findIndex(y=>x.start===y.start&&x.end===y.end)===i);
+  const raw={version:1 as const,id:'EV_'+jsonHash({source:s.id,hash:s.contentHash,span:w.span,fact,context:supportingSpans,version:CONTEXTUAL_MECHANISM_VERSION}).slice(0,20),sourceId:s.id,sourceSpan:w.span,exactText:w.span.text,normalizedText:w.text,evidenceType:fact.factType,supports:fact,extractionConfidence:'MEDIUM' as const,truthStatus:'EXTRACTED' as const,extractionMethod:'MECHANISM_V2' as const,contentHash:s.contentHash,table:null,contextSpans:supportingSpans.slice(1),mechanismContext:{kind,documentId:s.id,paragraphIndex:w.paragraphIndex,sentenceIndex:w.sentenceIndex,supportingSpans,cleaningRules:w.cleaningRules,...(rawParse?{parse:rawParse}:{})}};
   if(evidence.some(e=>e.id===raw.id))return;
   const e={...raw,fingerprint:jsonHash(raw)},c={id:'FC_'+jsonHash({fact,evidence:e.id}).slice(0,20),canonicalFact:fact,evidenceIds:[e.id],extractionConfidence:'MEDIUM' as const,status:'EXTRACTED' as const};evidence.push(e);candidates.push({...c,fingerprint:jsonHash(c)});
  }

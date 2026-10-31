@@ -1,0 +1,22 @@
+/** Operator probe (Phase29): plan + compile + QA from a script with estimated timing (no TTS/render). */
+import {readFileSync} from 'node:fs';
+const R='../../src/';
+const {ingestScript}=await import(R+'script-mode/ingest');const {understandScript}=await import(R+'script-mode/understand');
+const {plannerInputFromScript}=await import(R+'script-mode/input');const {planVisualCausal}=await import(R+'visual-causal/planner');
+const {validateVisualPlan}=await import(R+'visual-causal/verify');const {compileVisualPlan}=await import(R+'visual-causal/compile');const {visualQa}=await import(R+'visual-causal/qa');
+const text=process.argv[2].endsWith('.txt')?readFileSync(process.argv[2],'utf8'):process.argv[2];
+const u=understandScript(ingestScript(text));let at=0;
+const timing=u.segments.map(s=>{const len=Math.round(s.span.text.split(/\s+/).length/2.7*30)+8;const w={sentenceId:s.id,startFrame:at,endFrame:at+len};at+=len;return w;});
+const input=plannerInputFromScript(u,timing,30);const plan=planVisualCausal(input);
+console.log('template',plan.world.template,'entities',plan.world.entities.map(e=>e.entityId+':'+e.assembly+':'+e.grounding+':'+(e.label??'')).join(' | '));
+for(const b of plan.beats)console.log(b.order,b.startFrame,b.endFrame,b.grounding,b.visualIntent,b.cameraZone,b.focusEntityId,b.proof?.level??'',b.operations.map(o=>o.operation+(o.observed?'(obs)':'')+(o.sustain?'(sus)':'')+':'+o.target).join(','));
+console.log('gaps',JSON.stringify(plan.gaps));
+console.log('validation',JSON.stringify(validateVisualPlan(plan,input.relations.map(r=>r.id))));
+const seq=compileVisualPlan(plan,{sentences:timing.map(t=>({id:t.sentenceId,text:u.segments.find(s=>s.id===t.sentenceId)!.span.text,startFrame:t.startFrame,endFrame:t.endFrame}))});
+const qa=visualQa(plan,seq);console.log(JSON.stringify(qa.dims),'stasis',qa.longestMeaningfulStasisSeconds.toFixed(2),'shots',qa.shots,'cuts',qa.cuts,'proof',JSON.stringify(qa.proof),'cont',qa.continuityIssues.slice(0,5));
+console.log(qa.beats.map(b=>b.order+':'+b.zone+':'+(b.focusExtent?.toFixed(2)??'-')+'/'+(b.focusVisibleFraction?.toFixed(2)??'-')+':'+b.occupancyStatus).join(' '));
+const {directionMetrics}=await import(R+'visual-causal/direction-metrics');console.log('direction',JSON.stringify(directionMetrics(plan)));
+console.log('offFrame',JSON.stringify(qa.offFrameChanges));
+console.log('spatial',JSON.stringify(qa.spatial));console.log('causal',JSON.stringify(qa.causalCamera),'sync',JSON.stringify(qa.semanticSync),'context',JSON.stringify(plan.context));
+console.log('readability',JSON.stringify(qa.readability));console.log('stasis2',JSON.stringify(qa.meaningfulStasis));
+console.log('demoQA',JSON.stringify({verdict:qa.demonstrationQa.verdict,failed:qa.demonstrationQa.failed,gates:Object.fromEntries(Object.entries(qa.demonstrationQa.gates).map(([k,g])=>[k,g.status+":"+g.value+(g.status==="FAIL"&&g.detail?" "+JSON.stringify(g.detail):"")]))}));

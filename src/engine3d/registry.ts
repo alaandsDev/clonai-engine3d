@@ -35,6 +35,9 @@ const definitions: Record<string, string[]> = {
     "DOOR",
     "THERMOMETER",
     "CAR",
+    "AIRCRAFT",
+    "AIRFOIL",
+    "VECTOR_ARROW",
   ],
   action: [
     "IDLE",
@@ -77,6 +80,8 @@ export const resources: Resource[] = Object.entries(definitions).flatMap(
             ? { value: { min: -150, max: 150 } }
           : name === "CAR"
             ? { frost: {min:0,max:1} }
+          : name === "VECTOR_ARROW"
+            ? { palette: {min:0,max:3} }
           : name === "SNOW"
               ? { intensity: { min: 0, max: 1 } }
               : type === "camera"
@@ -88,7 +93,7 @@ export const resources: Resource[] = Object.entries(definitions).flatMap(
         type: type as ResourceType,
         name,
         description: `Procedural ${type}: ${name.toLowerCase().replaceAll("_", " ")}`,
-        tags: [type, ...name.toLowerCase().split("_")],
+        tags: [type, ...name.toLowerCase().split("_"), ...(name === 'AIRCRAFT' ? ['airplane','aviation','flight'] : name === 'AIRFOIL' ? ['wing','section','aerodynamics'] : name === 'VECTOR_ARROW' ? ['direction','force','diagram'] : [])],
         status: "available",
         source: "procedural",
         capabilities: [
@@ -97,7 +102,7 @@ export const resources: Resource[] = Object.entries(definitions).flatMap(
         ],
         metadata: {
           parameters,
-          performanceClass: name === "SNOW" ? "medium" : "light",
+          performanceClass: name === "SNOW" || name === 'AIRCRAFT' ? "medium" : "light",
           ...(type === "action"
             ? {
                 compatibleCharacters: advanced

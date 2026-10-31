@@ -1,0 +1,2 @@
+No início a comporta está fechada.
+O motor gira a engrenagem, que abre a comporta.

@@ -33,9 +33,11 @@ export function validateResearchRequest(r: ResearchRequest) {
     const p = r.sourcePolicy;
     if (p) {
         for (const k of Object.keys(p))
-            if (!['minIndependentSources', 'minPrimaryQuality', 'allowFahrenheitConversion', 'allowEnglishExtraction', 'temporalComparison', 'maxSourceBytes', 'maxTotalSourceBytes', 'maxNormalizedCharacters', 'evaluationDate', 'researchVersion', 'factTypeQuorum', 'residencyMaxAgeYears', 'observationSitePolicy', 'mechanismVersion', 'contextualMechanisms'].includes(k))
+            if (!['minIndependentSources', 'minPrimaryQuality', 'allowFahrenheitConversion', 'allowEnglishExtraction', 'temporalComparison', 'maxSourceBytes', 'maxTotalSourceBytes', 'maxNormalizedCharacters', 'evaluationDate', 'researchVersion', 'factTypeQuorum', 'residencyMaxAgeYears', 'observationSitePolicy', 'mechanismVersion', 'contextualMechanisms', 'progressiveStory', 'contextualParser'].includes(k))
                 throw Error('RESEARCH_POLICY unknown ' + k);
         if(p.contextualMechanisms!==undefined&&(p.contextualMechanisms!==true||p.mechanismVersion!==2))throw Error('RESEARCH_POLICY contextualMechanisms requires mechanismVersion 2');
+        if(p.progressiveStory!==undefined&&(p.progressiveStory!==true||p.mechanismVersion!==2||p.contextualMechanisms!==true||p.researchVersion!==4||r.researchGoal!=='PROCESS'))throw Error('RESEARCH_POLICY progressiveStory requires contextual PROCESS Research v4');
+        if(p.contextualParser!==undefined&&(p.contextualParser!==1||p.progressiveStory!==true))throw Error('RESEARCH_POLICY contextualParser requires progressiveStory');
         if (p.mechanismVersion !== undefined && (p.mechanismVersion !== 2 || r.researchGoal !== 'PROCESS' || (p.researchVersion ?? 1) < 2))
             throw Error('RESEARCH_POLICY mechanismVersion requires PROCESS and researchVersion >= 2');
         if (p.researchVersion !== undefined && ![1, 2, 3, 4].includes(p.researchVersion))

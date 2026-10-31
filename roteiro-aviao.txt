@@ -1,0 +1,16 @@
+Por que um avião consegue voar mesmo sendo tão pesado?
+
+O peso puxa o avião para baixo.
+Para se manter no ar, ele precisa de uma força que compense esse peso: a sustentação.
+
+Os motores impulsionam o avião para a frente. Assim, o ar passa pelas asas.
+A forma da asa e seu ângulo em relação ao ar fazem o escoamento mudar de direção.
+O ar é desviado para baixo, e a asa recebe uma força para cima.
+
+Isso também pode ser descrito pelas diferenças de pressão ao redor da asa.
+São duas maneiras de analisar a mesma interação.
+
+Num voo reto e nivelado, em velocidade constante, a sustentação equilibra o peso.
+Asas grandes e uma velocidade adequada ajudam a produzir a força necessária.
+
+O avião continua pesado. As asas geram a sustentação que equilibra esse peso.

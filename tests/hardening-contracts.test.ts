@@ -46,7 +46,7 @@ test("declared final state must agree with the actual prop execution", () => {
   s.props[0].finalState = { openProgress: 1 };
   assert(resolveShot(s));
 });
-test("every one of the 50 available IDs executes its actual category implementation", () => {
+test("every one of the 53 available IDs executes its actual category implementation", () => {
   const s = resolveShot(shotFixture());
   for (const r of registry.entries) {
     if (r.type === "character")
@@ -102,7 +102,7 @@ test("every one of the 50 available IDs executes its actual category implementat
       );
     }
   }
-  assert.equal(registry.entries.length, 50);
+  assert.equal(registry.entries.length, 53);
 });
 test("H01 central helper rejects hostile Windows, Unix and mixed names", () => {
   const root = path.resolve("out/engine3d/phase6b/path-sandbox");
@@ -372,7 +372,7 @@ test("available metadata cannot register an unimplemented executor", () => {
       new Registry([{ ...registry.entries[0], id: "CHAR_UNIMPLEMENTED_001" }]),
     "EXECUTOR_NOT_FOUND",
   );
-  assert.equal(registry.entries.length, 50);
+  assert.equal(registry.entries.length, 53);
 });
 test("captions fail explicitly rather than dropping words on short timeline", () => {
   rejects(

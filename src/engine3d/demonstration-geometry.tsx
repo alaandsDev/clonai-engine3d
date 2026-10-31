@@ -8,6 +8,8 @@ import { AssemblyGeometry, ContactShadow, type AssemblyContext, type Environment
  * so legacy demonstrations render unchanged. The ground opening follows the terrain section footprint. */
 export function environmentStyleOf(program: DemonstrationProgram | undefined, state: DemonstrationState | undefined): EnvironmentStyle | undefined {
     if (!program || !state || !program.subjects.some(s => s.assembly)) return;
+    const setting = program.subjects.some(s => s.assembly === 'CLOUD_FIELD') ? 'SKY' as const : program.subjects.some(s => s.assembly === 'WATER_SURFACE') ? 'WATER' as const : program.subjects.some(s => s.assembly === 'INTERIOR_ROOM') ? 'INDOOR' as const : undefined;
+    if (setting) return { stylized: true, setting };
     const terrain = program.subjects.find(s => s.assembly === 'TERRAIN_SECTION' && state.subjects[s.id]?.visible);
     if (!terrain) return { stylized: true };
     const p = state.subjects[terrain.id].position, [w, , d] = terrain.size;
@@ -42,7 +44,7 @@ export function DemonstrationGeometry({ program, state, frame = 0, fps = 30 }: {
                 return null;
             if (sub.assembly)
                 return <group key={sub.id} position={s.position} rotation={s.rotation} scale={s.scale}>
-                    {(sub.assembly === 'GABLED_BUILDING' || sub.assembly === 'OPEN_BASIN') && <ContactShadow at={[0, -sub.size[1] / 2, 0]} radius={Math.max(sub.size[0], sub.size[2]) * 0.85} />}
+                    {(sub.assembly === 'GABLED_BUILDING' || sub.assembly === 'OPEN_BASIN' || sub.assembly === 'VANE_RING' || sub.assembly === 'RAISED_GROUND' || sub.assembly === 'DISPLAY_BLOCK' || sub.assembly === 'FLAME') && s.position[1] - sub.size[1] / 2 < 0.05 && <ContactShadow at={[0, -sub.size[1] / 2, 0]} radius={Math.max(sub.size[0], sub.size[2]) * 0.85} />}
                     <AssemblyGeometry sub={sub} s={s} ctx={ctx} /></group>;
             const highlight = s.parameters.highlight ?? 0, color = '#' + new Color(sub.color).lerp(new Color('#ffffff'), highlight).getHexString();
             return <group key={sub.id} position={s.position} rotation={s.rotation} scale={s.scale.map(v => v * (1 + highlight * .1)) as Vec3}>

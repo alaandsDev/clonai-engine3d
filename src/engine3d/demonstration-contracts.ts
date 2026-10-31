@@ -45,12 +45,18 @@ export interface DemonstrationSubject {
     layer?: 'surface' | 'subsurface' | 'deep';
     /** Phase27B: optional generic stylized assembly composed from primitives (visual only). */
     assembly?: Assembly;
+    parentId?:string;
+    variant?:'STEM'|'CONTROL'|'PHASE'|'THERMAL'|'KITCHEN_LIKE'|'BATHROOM_LIKE'|'BUILDING_SHAFT'|'WORKSHOP'|'DOOR_FRONT'|'COMPRESSOR_LIKE'|'VALVE_LIKE'|'HEAT_EXCHANGER'|'CONTROL_UNIT'|'COMPRESSION'|'PRESSURE'|'PERFORATED'|'PUMP_LIKE'|'NEUTRAL_INTERIOR';
 }
 /** Generic stylized assemblies and the primitive kind each one renders. Editorial geometry only. */
-export const ASSEMBLY_KINDS = { TERRAIN_SECTION: 'LAYER', LIQUID_VOLUME: 'LAYER', PIPE: 'PATH', OPEN_BASIN: 'CYLINDER', GABLED_BUILDING: 'BOX', FRAME_PANEL: 'BOX', PANEL: 'BOX', CARRIAGE: 'BOX', DISPLAY_BLOCK: 'BOX' } as const;
+export const ASSEMBLY_KINDS = { TERRAIN_SECTION: 'LAYER', LIQUID_VOLUME: 'LAYER', PIPE: 'PATH', OPEN_BASIN: 'CYLINDER', GABLED_BUILDING: 'BOX', FRAME_PANEL: 'BOX', PANEL: 'BOX', CARRIAGE: 'BOX', DISPLAY_BLOCK: 'BOX', ROTOR: 'CYLINDER', VANE_RING: 'CYLINDER', RAISED_GROUND: 'BOX', VESSEL: 'CYLINDER', LID: 'CYLINDER', FLAME: 'CYLINDER', STEAM_PLUME: 'CYLINDER', PEG: 'CYLINDER', FUSELAGE: 'BOX', HULL: 'BOX', CAR_BODY: 'BOX', LIFT_SURFACE: 'BOX', PROPULSOR: 'CYLINDER', STREAMLINES: 'CYLINDER', FORCE_ARROW: 'CYLINDER', PRESSURE_FIELD: 'CYLINDER', CLOUD_FIELD: 'CYLINDER', WATER_SURFACE: 'CYLINDER', ROAD_STRIP: 'CYLINDER', STUDIO_BACKDROP: 'CYLINDER', ENCLOSURE: 'CYLINDER', STATE_TINT: 'CYLINDER', MACHINE_UNIT: 'CYLINDER', TRANSFER_PATH: 'PATH', INTERIOR_ROOM: 'CYLINDER', ROTATING_CONTAINER: 'CYLINDER', OUTER_CONTAINER: 'CYLINDER', CONTENT_ITEMS: 'CYLINDER' } as const;
 export type Assembly = keyof typeof ASSEMBLY_KINDS;
+/** Conservative mesh budgets for registered props whose geometry differs from the legacy default. */
+export const PROP_MESHES:Record<string,number>={PROP_CAR_001:25,PROP_AIRCRAFT_001:48,PROP_AIRFOIL_001:2,PROP_VECTOR_ARROW_001:2};
 /** Estimated mesh count per assembly (budget accounting, not exact draw calls). */
-export const ASSEMBLY_MESHES: Record<Assembly, number> = { TERRAIN_SECTION: 22, LIQUID_VOLUME: 14, PIPE: 12, OPEN_BASIN: 6, GABLED_BUILDING: 9, FRAME_PANEL: 6, PANEL: 3, CARRIAGE: 6, DISPLAY_BLOCK: 3 };
+export const ASSEMBLY_MESHES: Record<Assembly, number> = { TERRAIN_SECTION: 22, LIQUID_VOLUME: 14, PIPE: 12, OPEN_BASIN: 6, GABLED_BUILDING: 9, FRAME_PANEL: 6, PANEL: 3, CARRIAGE: 6, DISPLAY_BLOCK: 3, ROTOR: 12, VANE_RING: 16, RAISED_GROUND: 8, VESSEL: 16, LID: 6, FLAME: 22, STEAM_PLUME: 15, PEG: 4, FUSELAGE: 14, HULL: 6, CAR_BODY: 7, LIFT_SURFACE: 6, PROPULSOR: 8, STREAMLINES: 12, FORCE_ARROW: 3, PRESSURE_FIELD: 3, CLOUD_FIELD: 20, WATER_SURFACE: 6, ROAD_STRIP: 6, STUDIO_BACKDROP: 4, ENCLOSURE: 14, STATE_TINT: 10, MACHINE_UNIT: 8, TRANSFER_PATH: 12, INTERIOR_ROOM: 9, ROTATING_CONTAINER: 7, OUTER_CONTAINER: 5, CONTENT_ITEMS: 9 };
+/** Phase29 functional silhouettes: mesh estimate of a variant that draws a different shape than its assembly's default. */
+export const VARIANT_MESHES: Partial<Record<NonNullable<DemonstrationSubject['variant']>, number>> = { COMPRESSOR_LIKE: 8, CONTROL_UNIT: 5, VALVE_LIKE: 6, HEAT_EXCHANGER: 10, COMPRESSION: 10, PRESSURE: 10, PUMP_LIKE: 7 };
 export interface SubjectState {
     position: Vec3;
     rotation: Vec3;
@@ -93,7 +99,9 @@ export interface DemonstrationProgram {
 export interface VisualDemonstration extends Omit<DemonstrationProgram, 'compilerVersion'> {
     direction: DirectedSequence;
 }
-export const DEMONSTRATION_LIMITS = Object.freeze({ subjects: 8, steps: 32, pathPoints: 8, simultaneousOperations: 4, primitiveMeshes: 80, frostPatches: 12, flowParticles: 0 });
+/** subjects / primitiveMeshes bound what is VISIBLE at any frame (simultaneous visual load).
+ * subjectsTotal / primitiveMeshesTotal are hard safety ceilings on the whole program (Phase29). */
+export const DEMONSTRATION_LIMITS = Object.freeze({ subjects: 10, subjectsTotal: 24, /* Phase29: mechanism scenes show parts plus local state carriers; the mesh budgets below stay the real render guard */ steps: 96, pathPoints: 8, simultaneousOperations: 4, primitiveMeshes: 100, primitiveMeshesTotal: 240, frostPatches: 12, flowParticles: 0 });
 export const carStates: PropStateDefinition[] = [
     { stateId: 'NORMAL', parameters: { frost: 0 }, visualModifiers: { tint: '#e44837' }, allowedTransitions: ['FROSTED'] },
     { stateId: 'FROSTED', parameters: { frost: .45 }, visualModifiers: { tint: '#a8d9ed' }, allowedTransitions: ['FROZEN'] },

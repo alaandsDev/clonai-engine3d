@@ -1,0 +1,6 @@
+/** Operator: mechanism relations recovered from a script (no render). */
+import {readFileSync} from 'node:fs';import {ingestScript} from '../../src/script-mode/ingest';import {understandScript} from '../../src/script-mode/understand';import {mechanismRelations,mechanismGraph,type MechRef} from '../../src/script-mode/mechanism';
+const t=process.argv[2].endsWith('.txt')?readFileSync(process.argv[2],'utf8'):process.argv[2],u=understandScript(ingestScript(t)),rs=mechanismRelations(u);
+const r=(x?:MechRef)=>x?(x.head??'?')+(x.resolvedFrom?'←'+x.resolvedFrom[0]:'')+(x.region?'('+x.region+')':''):'';
+if(!process.argv.includes('--graph'))for(const m of rs)console.log(m.sentenceId,m.type,m.lemma,'S='+r(m.subject??undefined),m.object?'O='+r(m.object):'',m.quantity?'Q='+r(m.quantity):'',m.source?'FROM='+r(m.source):'',m.path?'VIA='+r(m.path):'',m.destination?'TO='+r(m.destination):'',m.property?'P='+m.property+':'+m.direction+(m.propertyOwner?'@'+r(m.propertyOwner):''):'',m.after?'AFTER='+m.after:'',m.resultState?'RESULT='+m.resultState:'',m.negated?'NEG':'',m.modality!=='ASSERTED'?m.modality:'',m.condition?'IF«'+m.condition.text+'»':'',m.qualifiers.join(','));
+console.log(JSON.stringify(mechanismGraph(rs)));

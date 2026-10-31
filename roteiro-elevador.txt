@@ -1,0 +1,15 @@
+Como um elevador sabe exatamente em qual andar parar?
+
+Você aperta o botão do andar. O controlador recebe esse destino.
+Para parar na altura certa, ele também precisa acompanhar a cabine.
+
+Em um sistema comum, um encoder mede o movimento do motor.
+Seus sinais ajudam a acompanhar o deslocamento e a velocidade.
+Sensores na cabine identificam referências instaladas no poço.
+
+Quando a cabine se aproxima do andar escolhido, o controlador reduz a velocidade.
+A aproximação termina com o nivelamento: o ajuste fino que deixa o piso da cabine alinhado ao piso do corredor.
+
+Os detalhes mudam entre modelos. Alguns usam uma fita codificada para medir a posição.
+
+No fim, tudo se conecta: você escolhe o destino, os sensores mostram a posição e o controle ajusta o movimento.

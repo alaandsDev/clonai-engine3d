@@ -1,0 +1,2 @@
+No começo a lâmpada está desligada.
+Depois a lâmpada fica ligada.

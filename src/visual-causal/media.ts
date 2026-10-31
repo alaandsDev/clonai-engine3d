@@ -3,19 +3,19 @@ import {createHash} from 'node:crypto';
 import path from 'node:path';
 import {promisify} from 'node:util';
 import {execFile} from 'node:child_process';
-import {narration,ffprobePath} from '../engine3d/audio/narration';
+import {narration,ffprobePath,defaultConfig,type NarrationConfig} from '../engine3d/audio/narration';
 import {ffmpegExecutable} from '../sound/tools';
 import {decodeAudio,audioQa} from '../sound/mixer';
 import type {DirectedSequence} from '../engine3d/directed';
 /** Phase 27 media helpers: the Phase19/25 render path (edge-tts narration of exact sentences,
  * existing DirectedSequence composition, integer PCM budgets, mux, full decode). */
 const run=promisify(execFile);
-export interface VoiceTrack {sentenceId:string;text:string;durationFrames:number;relativeAudioPath:string}
-export async function synthesize(sentences:{id:string;text:string}[],fps:number):Promise<VoiceTrack[]>{
- const out:VoiceTrack[]=[];for(const s of sentences){const t=await narration(s.id,s.text,fps);out.push({sentenceId:s.id,text:s.text,durationFrames:t.durationFrames,relativeAudioPath:t.relativeAudioPath});}return out;
+export interface VoiceTrack {sentenceId:string;text:string;durationFrames:number;relativeAudioPath:string;voiceRate?:string;pauseAfterFrames?:number;pacing?:{start:number;end:number;frames:number;leadingSeconds:number;trailingSeconds:number;keptLeadingSeconds:number;keptTrailingSeconds:number;removedSeconds:number;sourceRelativeAudioPath:string;rawDurationSeconds:number;durationSeconds:number;pauseKind:import('../engine3d/audio/pacing').PauseKind;pauseSeconds:number;voiceRate:string;thresholdDb:number;guardSeconds:number}}
+export async function synthesize(sentences:{id:string;text:string}[],fps:number,config?:NarrationConfig):Promise<VoiceTrack[]>{
+ const out:VoiceTrack[]=[];for(const s of sentences){const t=await narration(s.id,s.text,fps,undefined,config??defaultConfig);out.push({sentenceId:s.id,text:s.text,durationFrames:t.durationFrames,relativeAudioPath:t.relativeAudioPath,...(config?{voiceRate:config.rate}:{})});}return out;
 }
 /** Contiguous sentence windows; each window is exactly the measured speech plus a short pause. */
-export function sentenceTiming(tracks:VoiceTrack[],pauseFrames:number){let at=0;return tracks.map((t,i)=>{const len=t.durationFrames+(i<tracks.length-1?pauseFrames:0),w={sentenceId:t.sentenceId,startFrame:at,endFrame:at+len};at+=len;return w;});}
+export function sentenceTiming(tracks:VoiceTrack[],pauseFrames:number){let at=0;return tracks.map((t,i)=>{const len=t.durationFrames+(t.pauseAfterFrames??(i<tracks.length-1?pauseFrames:0)),w={sentenceId:t.sentenceId,startFrame:at,endFrame:at+len};at+=len;return w;});}
 export async function renderStills(seq:DirectedSequence,frames:number[],dir:string){
  const {bundle}=await import('@remotion/bundler'),{openBrowser,selectComposition,renderStill}=await import('@remotion/renderer'),opts={gl:'angle' as const};
  await mkdir(dir,{recursive:true});const serveUrl=await bundle({entryPoint:path.resolve('src/index.tsx'),publicDir:path.resolve('public')}),browser=await openBrowser('chrome',{chromiumOptions:opts});const files:string[]=[];

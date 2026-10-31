@@ -85,6 +85,7 @@ export interface ResearchSessionV2 {
     metrics: Record<string, number | string | string[]>;
 }
 export interface SearchQuery {
+    storyNeed?: {need:import('../../curiosity/progression').StoryNeed;priorPackFingerprint:string;priorKnowledgeFingerprint:string;priorSourceIds:string[]};
     id: string;
     round: number;
     stage: 'BROAD_DISCOVERY' | 'ENTITY_DISCOVERY' | 'FACT_VERIFICATION' | 'CORROBORATION';
@@ -142,6 +143,7 @@ export interface CandidateSource {
 }
 export type FetchStatus = 'SUCCESS' | 'HTTP_ERROR' | 'TIMEOUT' | 'REDIRECT_BLOCKED' | 'SSRF_BLOCKED' | 'MIME_BLOCKED' | 'SIZE_BLOCKED' | 'ROBOTS_BLOCKED' | 'CONTENT_UNAVAILABLE' | 'PARSE_FAILED';
 export interface FetchAttempt {
+    scope?:ReturnType<typeof import('./relevance').postFetchScope>;
     id: string;
     url: string;
     finalUrl: string;
@@ -216,6 +218,13 @@ export interface WebEnvironment {
     sleep(ms: number): Promise<void>;
 }
 export interface ResearchSession {
+    relevance?:import('./relevance').SearchResultRelevance[];
+    progressive?: {
+        version:'progressive-acquisition/1.0.0';
+        historicalInitial:null|{sessionFingerprint:string;queryCount:number;fetchCount:number;sourceIds:string[]};
+        newQueryIds:string[];stopReason:string;
+        iterations:{round:number;beforePackFingerprint:string;afterPackFingerprint:string;queryIds:string[];newFetches:number;newSources:number;newRelations:number;connectedBefore:number;connectedAfter:number;stopReason:string|null}[];
+    };
     version: string;
     mode: 'LIVE_DISCOVERY' | 'CACHED_REPLAY';
     request: ResearchRequest;

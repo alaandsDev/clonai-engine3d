@@ -2,6 +2,7 @@ import { jsonHash } from '../../editorial/fingerprint';
 import { canonicalUrl, hostMatches } from './security';
 import type { SearchProvider, SearchQuery, SearchResult, CandidateSource, WebResearchConfig } from './contracts';
 import { SecureHttpClient } from './http';
+import {searchResultRelevance} from './relevance';
 export class MediaWikiSearchProvider implements SearchProvider {
     readonly kind = 'MEDIAWIKI_REST_SEARCH';
     constructor(private client: SecureHttpClient) { }
@@ -21,7 +22,8 @@ export class MediaWikiSearchProvider implements SearchProvider {
         return { results: [], diagnostic: 'SEARCH_PROVIDER_UNAVAILABLE ' + String(e), latencyMs: this.client.env.now() - start };
     } }
 }
-export function candidateSources(results: SearchResult[], queries: SearchQuery[], config: WebResearchConfig): CandidateSource[] { const map = new Map<string, CandidateSource>(); for (const r of results) {
+export function candidateSources(results: SearchResult[], queries: SearchQuery[], config: WebResearchConfig,topic?:string): CandidateSource[] { const map = new Map<string, CandidateSource>(); for (const r of topic?[...results].sort((a,b)=>searchResultRelevance(topic,b).score-searchResultRelevance(topic,a).score||a.fingerprint.localeCompare(b.fingerprint,'en')):results) {
+    const relevance=topic?searchResultRelevance(topic,r):undefined;if(relevance&&relevance.decision!=='FETCH')continue;
     let url: string;
     try {
         url = canonicalUrl(r.url);
@@ -40,4 +42,4 @@ export function candidateSources(results: SearchResult[], queries: SearchQuery[]
         continue;
     }
     map.set(url, { id: 'C_' + jsonHash(url).slice(0, 16), canonicalUrl: url, domain, queryIds: [r.queryId], researchQuestionIds: q?.researchQuestionIds ?? [], discoveryRanks: [r.rank], title: r.title, expectedSourceType: hint?.sourceType ?? (hostMatches(domain, 'wikipedia.org') ? 'REFERENCE' : 'OTHER'), fetchStatus: 'PENDING', selectionScore: ({ PRIMARY_OFFICIAL: 100, PRIMARY_DATASET: 100, INSTITUTIONAL: 80, ACADEMIC: 70, REFERENCE: 40, NEWS: 20, OTHER: 0 }[hint?.sourceType ?? (hostMatches(domain, 'wikipedia.org') ? 'REFERENCE' : 'OTHER')]) + (preferred ? 60 : 0) + (url.startsWith('https:') ? 1 : 0) + Math.max(0, 10 - r.rank), reasons: [reason, 'Discovery title/snippet never supplies evidence'] });
-} return [...map.values()].sort((a, b) => b.selectionScore - a.selectionScore || a.canonicalUrl.localeCompare(b.canonicalUrl, 'en')).slice(0, config.maxCandidateSources); }
+} if(topic)for(const c of map.values()){const rs=results.filter(r=>r.url===c.canonicalUrl).map(r=>searchResultRelevance(topic,r)).sort((a,b)=>a.resultFingerprint.localeCompare(b.resultFingerprint,'en'));c.selectionScore+=1000*Math.max(...rs.map(r=>r.score));c.reasons.push('RELEVANCE_ONLY_NOT_EVIDENCE '+JSON.stringify(rs));}return [...map.values()].sort((a, b) => b.selectionScore - a.selectionScore || a.canonicalUrl.localeCompare(b.canonicalUrl, 'en')).slice(0, config.maxCandidateSources); }

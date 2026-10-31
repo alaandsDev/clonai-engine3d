@@ -1,4 +1,6 @@
 import { jsonHash } from '../../editorial/fingerprint';
+import {verifyProcessAcquisition} from '../../curiosity/replay';
+import {postFetchScope} from './relevance';
 import { contentHash, normalizedSource, assessSource } from '../source';
 import { buildEvidencePack } from '../pack';
 import type { DiscoveryVia, ResearchPlan, SourceInput, SourcePack, SourceProvider, SourceType } from '../contracts';
@@ -53,6 +55,13 @@ export class WebSourceProvider implements SourceProvider {
         allowed: boolean;
     }>();
     constructor(readonly client: SecureHttpClient, readonly cache?: SnapshotCache) { }
+    /** Reuse a complete verified acquisition, never caller-supplied factual seeds.
+     * Its snapshots and original queries remain labelled historical in the session. */
+    restoreAcquisition(session:import('./contracts').ResearchSession,plan:ResearchPlan){
+        if(!plan.policy.progressiveStory||session.request.topic!==plan.request.topic||this.sources.length)throw Error('HISTORICAL_ACQUISITION_SCOPE');
+        verifyProcessAcquisition(session);
+        this.sources=structuredClone(session.acceptedSources);
+    }
     receive(_plan: ResearchPlan): SourcePack { return { version: 1, id: 'web-acquired-snapshots', fixture: false, labels: ['REAL_WEB_SNAPSHOTS', 'SESSION_CANDIDATES_ONLY'], sources: structuredClone(this.sources) }; }
     /** `discovery` selects the Phase 21 intake: post-fetch classification, discovery provenance and a per-source admission check. */
     async fetch(candidate: CandidateSource, plan: ResearchPlan, discovery?: { via: DiscoveryVia; referenceIds: string[]; strategy: string; independence?: string; version?: 3 | 4; datasetIdentity?: SourceInput['metadata']['dataset']; datasetTarget?: SourceInput['metadata']['datasetTarget']; dataset?: { maxBytes: number; terms: string[] } }): Promise<{
@@ -115,6 +124,7 @@ export class WebSourceProvider implements SourceProvider {
             const classified = discovery ? classifySource(content, fetched.url, hint) : null;
             const source: SourceInput = { id: 'WEB_' + jsonHash({ url: fetched.url, hash }).slice(0, 20), provider: 'WEB_SEARCH', sourceType: classified?.sourceType ?? hint?.sourceType ?? (hostMatches(domain, 'wikipedia.org') ? 'REFERENCE' : 'OTHER'), title, publisher: domain, canonicalLocator: fetched.url, language, contentType: mime === 'text/csv' ? (discovery ? 'text/csv' : 'text/plain') : mime as SourceInput['contentType'], content, contentHash: hash, retrievedAt: raw.fetchedAt, fixture: false, metadata: { directEvidence: discovery ? (DIRECT_V2.test(content) || discovery.version === 4 && /usual residents|permanent civilian residents|civilian population/i.test(content)) : /\d\s*(?:°|&deg;)/.test(content), ...(partial ? { partial } : {}), ...(discovery?.version===4&&discovery.datasetIdentity?{dataset:discovery.datasetIdentity}:{}), ...(discovery?.version===4&&discovery.datasetTarget?{datasetTarget:discovery.datasetTarget}:{}) }, provenance: { originKey: domain, discovery: { queryIds: candidate.queryIds, requestedUrl: candidate.canonicalUrl, finalUrl: fetched.url, ...(discovery ? { via: discovery.via, referenceIds: discovery.referenceIds, strategy: discovery.strategy, ...(discovery.independence ? { independence: discovery.independence } : {}) } : {}) }, sharedOriginKeys: cited.map(u => 'citation:' + u), description: 'Public HTTP snapshot; source class ' + (classified ? classified.reason : hint ? 'explicit configured domain hint: ' + hint.reason : 'heuristic reference/other') + '; outbound references are conservative reported-origin hints, not verified independent evidence' } };
             const doc = normalizedSource(source, plan.policy), assessment = assessSource(doc, plan.policy);
+            if(plan.policy.contextualParser===1){raw.scope=postFetchScope(plan.request.topic,doc);if(!raw.scope.onTopic)throw Error('CONTENT_UNAVAILABLE POST_FETCH_SCOPE_REJECTED '+raw.scope.reason);}
             if ((discovery?.version ?? 0) >= 3 && mime === 'text/html') {
                 const js = scriptDiagnostic(content, doc.normalized.text);
                 if (js)

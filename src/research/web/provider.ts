@@ -1,4 +1,5 @@
 import { jsonHash } from '../../editorial/fingerprint';
+import {verifyProgressiveQuestions} from '../../curiosity/replay';
 import { planResearch } from '../planner';
 import { buildEvidencePack } from '../pack';
 import { validateEvidencePack } from '../qa';
@@ -46,8 +47,10 @@ export async function runWebResearch(request: ResearchRequest, input: Partial<We
     searchProvider?: SearchProvider;
     cache?: SnapshotCache;
     extraProviders?: Partial<Record<DiscoveryStrategy, SearchProvider>>;
+    initialAcquisition?: ResearchSession;
 } = {}): Promise<ResearchSession> {
     const config = webConfig(input);
+    if(options.initialAcquisition&&!request.sourcePolicy?.progressiveStory)throw Error('HISTORICAL_ACQUISITION_REQUIRES_PROGRESSIVE_STORY');
     if (!config.enabled || config.cachePolicy === 'CACHED_REPLAY')
         throw Error('WEB_DISABLED_OR_REPLAY_REQUIRES_SESSION');
     if (request.sourcePolicy?.researchVersion === 4) {
@@ -142,6 +145,7 @@ export async function runWebResearch(request: ResearchRequest, input: Partial<We
     return { ...raw, fingerprint: jsonHash(raw) };
 }
 export function replayWebResearch(session: ResearchSession): ResearchSession {
+    if(session.request.sourcePolicy?.progressiveStory)verifyProgressiveQuestions(session);
     const { fingerprint, ...raw } = session;
     if (jsonHash(raw) !== fingerprint)
         throw Error('SESSION_INTEGRITY');

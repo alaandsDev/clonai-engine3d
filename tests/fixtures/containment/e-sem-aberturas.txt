@@ -1,0 +1,2 @@
+Dentro do tanque, a hélice gira e mistura a tinta.
+A tinta passa para o fundo do tanque.

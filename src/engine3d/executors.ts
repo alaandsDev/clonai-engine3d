@@ -36,6 +36,9 @@ export const executorKeys: Record<ResourceType, Record<string, string>> = {
     PROP_DOOR_001: "DOOR",
     PROP_THERMOMETER_001: "THERMOMETER",
     PROP_CAR_001: "CAR",
+    PROP_AIRCRAFT_001: "AIRCRAFT",
+    PROP_AIRFOIL_001: "AIRFOIL",
+    PROP_VECTOR_ARROW_001: "VECTOR_ARROW",
   },
   action: {
     ACTION_IDLE_001: "IDLE",

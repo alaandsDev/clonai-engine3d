@@ -1,0 +1,6 @@
+Como um filtro rotativo limpa a água de um reservatório?
+O cilindro de tela gira devagar dentro do reservatório.
+A água suja atravessa a malha do cilindro.
+A sujeira fica grudada contra a malha do cilindro.
+A água limpa passa para a parte interna do cilindro.
+Uma bomba puxa a água limpa do cilindro e envia pelo cano de saída.

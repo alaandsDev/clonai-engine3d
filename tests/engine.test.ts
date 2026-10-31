@@ -38,9 +38,9 @@ const rawShot = (): ShotSpec => {
 };
 const reject = (code: string, fn: () => unknown) =>
   assert.throws(fn, (e: unknown) => (e as EngineError).code === code);
-test("registry has 50 unique serializable resources without absolute paths", () => {
-  assert.equal(resources.length, 50);
-  assert.equal(new Set(resources.map((r) => r.id)).size, 50);
+test("registry has 53 unique serializable resources without absolute paths", () => {
+  assert.equal(resources.length, 53);
+  assert.equal(new Set(resources.map((r) => r.id)).size, 53);
   const s = JSON.stringify(resources);
   assert(!/[A-Z]:\\|\/Users\//.test(s));
   assert.deepEqual(JSON.parse(s), resources);

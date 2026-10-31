@@ -1,8 +1,9 @@
-import { Vector3 } from 'three';
+import { Vector3, Matrix4, Quaternion, Euler } from 'three';
+import {PROP_MESHES} from './demonstration-contracts';
 import { fail, type ShotSpec, type Vec3 } from './contracts';
 import { fields, finite, vec, text, list } from './schema';
 import { resource } from './validation';
-import { carStates, ASSEMBLY_KINDS, ASSEMBLY_MESHES, DEMONSTRATION_COMPILER_VERSION, DEMONSTRATION_LIMITS, type DemonstrationProgram, type DemonstrationState, type SubjectState, type NarrativeClaim, type VisualProof, type EnvironmentState } from './demonstration-contracts';
+import { carStates, ASSEMBLY_KINDS, ASSEMBLY_MESHES, VARIANT_MESHES, DEMONSTRATION_COMPILER_VERSION, DEMONSTRATION_LIMITS, type DemonstrationProgram, type DemonstrationState, type SubjectState, type NarrativeClaim, type VisualProof, type EnvironmentState } from './demonstration-contracts';
 const enums = (x: unknown, values: string[]) => { if (typeof x !== 'string' || !values.includes(x))
     fail('DEMONSTRATION_SCHEMA', 'unknown enum ' + String(x)); };
 function shape(v: unknown, keys: string[], optional: string[] = []) { fields(v, keys, 'demonstration'); for (const k of keys)
@@ -51,7 +52,7 @@ export const environmentCapabilities = (id: string) => ['visibility', 'tint', 'f
 export function environmentShape(e: EnvironmentState, id: string) { shape(e, ['visibility', 'tint', 'fogIntensity', 'groundCutaway', 'backgroundEmphasis']); bool(e.visibility); color(e.tint); for (const k of ['fogIntensity', 'groundCutaway', 'backgroundEmphasis'] as const)
     finite(e[k], k, 0, 1); if (e.groundCutaway && !environmentCapabilities(id).includes('groundCutaway'))
     fail('UNSUPPORTED_MODIFIER', 'groundCutaway ' + id); }
-const supportedParameters = (s: DemonstrationProgram['subjects'][number]) => ['highlight', ...(s.kind === 'PROP' ? (s.resourceId === 'PROP_CAR_001' ? ['frost'] : s.resourceId === 'PROP_THERMOMETER_001' ? ['value'] : []) : s.kind === 'CYLINDER' ? ['fillLevel'] : s.kind === 'PATH' ? ['connection', 'flowProgress', 'speed', 'amount', 'direction'] : [])];
+const supportedParameters = (s: DemonstrationProgram['subjects'][number]) => ['highlight', ...(s.kind === 'PROP' ? (s.resourceId === 'PROP_CAR_001' ? ['frost'] : s.resourceId === 'PROP_THERMOMETER_001' ? ['value'] : []) : s.kind === 'CYLINDER' ? ['fillLevel', ...(s.assembly ? ['activity'] : [])] : s.kind === 'PATH' ? ['connection', 'flowProgress', 'speed', 'amount', 'direction'] : [])];
 export function demonstrationStateShape(state: DemonstrationState, p: DemonstrationProgram, shot: ShotSpec) { shape(state, ['subjects', 'environment', 'presenterMode']); shape(state.subjects, p.subjects.map(s => s.id)); environmentShape(state.environment, shot.environment.resourceId); enums(state.presenterMode, ['PRESENTER', 'DEMONSTRATION', 'HYBRID']); for (const sub of p.subjects) {
     const s = state.subjects[sub.id];
     shape(s, ['position', 'rotation', 'scale', 'visible', 'stateId', 'parameters']);
@@ -81,12 +82,14 @@ export function validateDemonstrationProgram(p: DemonstrationProgram, shot: Shot
     list(p.subjects, 'subjects');
     list(p.steps, 'steps');
     list(p.presenterModes, 'presenterModes');
-    if (p.subjects.length < 1 || p.subjects.length > DEMONSTRATION_LIMITS.subjects || p.steps.length > DEMONSTRATION_LIMITS.steps)
+    if (p.subjects.length < 1 || p.subjects.length > DEMONSTRATION_LIMITS.subjectsTotal || p.steps.length > DEMONSTRATION_LIMITS.steps)
         fail('DEMONSTRATION_BUDGET', 'subjects/steps');
-    const ids = new Set<string>();
+    const ids = new Set<string>(), subjectMeshes = new Map<string, number>();
     let meshes = 0;
     for (const s of p.subjects) {
-        shape(s, ['id', 'kind', 'resourceId', 'size', 'color', 'path', 'layer', 'assembly'], ['resourceId', 'path', 'layer', 'assembly']);
+        shape(s, ['id', 'kind', 'resourceId', 'size', 'color', 'path', 'layer', 'assembly','parentId','variant'], ['resourceId', 'path', 'layer', 'assembly','parentId','variant']);
+        if(s.variant!==undefined)enums(s.variant,['STEM','CONTROL','PHASE','THERMAL','KITCHEN_LIKE','BATHROOM_LIKE','BUILDING_SHAFT','WORKSHOP','DOOR_FRONT','COMPRESSOR_LIKE','VALVE_LIKE','HEAT_EXCHANGER','CONTROL_UNIT','COMPRESSION','PRESSURE','PERFORATED','PUMP_LIKE','NEUTRAL_INTERIOR']);
+        if(s.parentId!==undefined)text(s.parentId,'parent id');
         if (s.assembly !== undefined) { enums(s.assembly, Object.keys(ASSEMBLY_KINDS)); if (ASSEMBLY_KINDS[s.assembly] !== s.kind) fail('DEMONSTRATION_SCHEMA', 'assembly ' + s.assembly + ' requires ' + ASSEMBLY_KINDS[s.assembly]); }
         text(s.id, 'subject');
         if (ids.has(s.id) || s.id === 'ENVIRONMENT')
@@ -101,12 +104,14 @@ export function validateDemonstrationProgram(p: DemonstrationProgram, shot: Shot
             resource(s.resourceId!, 'prop');
             if (!shot.props.some(i => i.instanceId === s.id && i.resourceId === s.resourceId))
                 fail('DEMONSTRATION_TARGET', 'missing prop subject');
-            meshes += s.resourceId === 'PROP_CAR_001' ? 25 : 8;
+            subjectMeshes.set(s.id, PROP_MESHES[s.resourceId!] ?? 8);
+            meshes += subjectMeshes.get(s.id)!;
         }
         else if (s.resourceId)
             fail('DEMONSTRATION_SCHEMA', 'primitive cannot have resourceId');
         else
-            meshes += s.assembly ? ASSEMBLY_MESHES[s.assembly] : s.kind === 'CYLINDER' ? 3 : s.kind === 'PATH' ? 14 : 1;
+            subjectMeshes.set(s.id, s.assembly ? (s.variant && VARIANT_MESHES[s.variant]) || ASSEMBLY_MESHES[s.assembly] : s.kind === 'CYLINDER' ? 3 : s.kind === 'PATH' ? 14 : 1);
+            meshes += subjectMeshes.get(s.id)!;
         if (s.kind === 'PATH') {
             list(s.path, 'path');
             if (s.path!.length < 2 || s.path!.length > DEMONSTRATION_LIMITS.pathPoints)
@@ -123,7 +128,8 @@ export function validateDemonstrationProgram(p: DemonstrationProgram, shot: Shot
         else if (s.layer)
             fail('DEMONSTRATION_SCHEMA', 'layer kind');
     }
-    if (meshes > DEMONSTRATION_LIMITS.primitiveMeshes)
+    for(const sub of p.subjects){const seen=new Set([sub.id]);let parent=sub.parentId;while(parent){if(seen.has(parent))fail('DEMONSTRATION_SCHEMA','parent cycle');seen.add(parent);const next=p.subjects.find(s=>s.id===parent);if(!next)throw Error('DEMONSTRATION_SCHEMA missing parent');parent=next.parentId;}}
+    if (meshes > DEMONSTRATION_LIMITS.primitiveMeshesTotal)
         fail('DEMONSTRATION_BUDGET', 'geometry mesh budget');
     demonstrationStateShape(p.initialState, p, shot);
     demonstrationStateShape(p.finalState, p, shot);
@@ -267,6 +273,13 @@ export function validateDemonstrationProgram(p: DemonstrationProgram, shot: Shot
             fail('DEMONSTRATION_BUDGET', 'simultaneous operations');
         const e = evaluateDemonstration(p, f);
         demonstrationStateShape(e, p, shot);
+        // Budget on what is visible at this frame (subjects and meshes), not on everything ever mentioned.
+        // Environment-like assemblies (backdrops, medium fields, rooms) are the stage, not subjects.
+        const visible = p.subjects.filter(x => e.subjects[x.id].visible && !['STUDIO_BACKDROP', 'CLOUD_FIELD', 'WATER_SURFACE', 'ROAD_STRIP', 'INTERIOR_ROOM'].includes(x.assembly ?? ''));
+        if (visible.length > DEMONSTRATION_LIMITS.subjects)
+            fail('DEMONSTRATION_BUDGET', 'simultaneous visible subjects');
+        if (visible.reduce((n, x) => n + (subjectMeshes.get(x.id) ?? 0), 0) > DEMONSTRATION_LIMITS.primitiveMeshes)
+            fail('DEMONSTRATION_BUDGET', 'geometry mesh budget');
     }
     if (!stateEqual(evaluateDemonstration(p, total), p.finalState))
         fail('DEMONSTRATION_STATE', 'finalState mismatch');
@@ -330,7 +343,20 @@ export function evaluateDemonstration(p: DemonstrationProgram, frame: number): D
             subject.parameters.highlight = (t === 1 ? 0 : Math.sin(t * Math.PI)) * Number(v.amount);
             break;
     }
-} return state; }
+} return attachedWorldState(p,state); }
+/** A single transform owner: animations act in local space, consumers receive
+ * parent × local world poses. No duplicate world-space tracking animations. */
+export function attachedWorldState(p:Pick<DemonstrationProgram,'subjects'>,state:DemonstrationState):DemonstrationState{
+ const matrices=new Map<string,Matrix4>(),visiting=new Set<string>();
+ const resolve=(id:string):Matrix4=>{const hit=matrices.get(id);if(hit)return hit;if(visiting.has(id))throw Error('DEMONSTRATION_SCHEMA parent cycle');visiting.add(id);const sub=p.subjects.find(s=>s.id===id),s=state.subjects[id];if(!sub||!s)throw Error('DEMONSTRATION_SCHEMA missing parent');
+  const local=new Matrix4().compose(new Vector3(...s.position),new Quaternion().setFromEuler(new Euler(...s.rotation)),new Vector3(...s.scale));
+  const world=sub.parentId?resolve(sub.parentId).clone().multiply(local):local;visiting.delete(id);matrices.set(id,world);return world;};
+ for(const sub of p.subjects)resolve(sub.id);
+ const visible=(id:string):boolean=>{const s=p.subjects.find(s=>s.id===id)!;return state.subjects[id].visible&&(!s.parentId||visible(s.parentId));};
+ const visibility=new Map(p.subjects.map(s=>[s.id,visible(s.id)]));
+ for(const sub of p.subjects)if(sub.parentId){const position=new Vector3(),rotation=new Quaternion(),scale=new Vector3();matrices.get(sub.id)!.decompose(position,rotation,scale);const e=new Euler().setFromQuaternion(rotation);state.subjects[sub.id]={...state.subjects[sub.id],position:position.toArray() as Vec3,rotation:[e.x,e.y,e.z],scale:scale.toArray() as Vec3,visible:visibility.get(sub.id)!};}
+ return state;
+}
 export function stateEqual(a: unknown, b: unknown): boolean { if (typeof a === 'number' && typeof b === 'number')
     return Math.abs(a - b) < 1e-6; if (a === null || b === null || typeof a !== 'object' || typeof b !== 'object')
     return a === b; const x = a as Record<string, unknown>, y = b as Record<string, unknown>; return Object.keys(x).length === Object.keys(y).length && Object.keys(x).every(k => Object.hasOwn(y, k) && stateEqual(x[k], y[k])); }

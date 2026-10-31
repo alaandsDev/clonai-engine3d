@@ -4,6 +4,7 @@ import {topicSubject} from '../topic/subject';
 import type {Vec3} from '../engine3d/contracts';
 import type {CameraState} from '../engine3d/directed';
 import {VISUAL_CAUSAL_VERSION} from './contracts';
+import {planScriptWorld} from './script-world';
 import type {BeatOperation,CameraZone,CausalVisualBeat,PersistentWorld,PlannerInput,PlannerRelation,PresenterIntent,VisualCausalPlan,VisualGap,VisualStateTransition,WorldEntity,WorldTemplate} from './contracts';
 /** Closed generic cue tables (spatial language, not topic nouns). */
 const SUBSURFACE=/subterr|subsolo|aquifer|lencol|freatic|underground|groundwater|subsurface/;
@@ -32,8 +33,11 @@ const ZONES:Record<WorldTemplate,Record<CameraZone,CameraState>>={
  TERRAIN_SUBSURFACE:{WORLD:cam([-3.4,2.0,7.4],[0.3,1.05,-0.6]),SYSTEM:cam([0.4,1.45,5.7],[-0.62,0.95,-0.1]),CUTAWAY:cam([1.6,1.6,8.4],[-0.2,-1.4,-0.3]),COMPONENT:cam([1.0,-2.3,5.0],[0,-3.4,-0.4]),ACTION:cam([1.0,-1.4,6.0],[0,-2.0,-0.4]),RESULT:cam([-1.0,1.9,6.3],[1.0,0.5,-0.7])},
  ENCLOSURE:{WORLD:cam([0.6,3.4,12.6],[0.3,2.1,0]),SYSTEM:cam([-0.4,2.3,8.6],[-0.5,1.8,0]),CUTAWAY:cam([0.3,2.4,6.6],[0,2.0,-0.2]),COMPONENT:cam([0.3,2.0,5.0],[0,1.8,-0.2]),ACTION:cam([0.4,2.4,6.4],[0,2.0,-0.2]),RESULT:cam([1.4,2.6,7.4],[0.9,2.0,0])},
  OPEN_STAGE:{WORLD:cam([0.8,2.6,9.0],[0.3,1.0,0]),SYSTEM:cam([0.3,1.6,5.4],[0,0.9,0]),CUTAWAY:cam([0.2,1.4,5.0],[0,0.8,0]),COMPONENT:cam([0.3,1.2,4.2],[0.2,0.8,0]),ACTION:cam([0.3,1.4,5.0],[0.2,0.8,0]),RESULT:cam([1.0,1.6,5.6],[0.8,0.8,0])},
+ // Script Mode computes its zones from the layout (script-world.ts); this entry is only a type default.
+ MECHANISM_STAGE:{WORLD:cam([0.8,2.6,9.0],[0.3,1.0,0]),SYSTEM:cam([0.3,1.6,5.4],[0,0.9,0]),CUTAWAY:cam([0.2,1.4,5.0],[0,0.8,0]),COMPONENT:cam([0.3,1.2,4.2],[0.2,0.8,0]),ACTION:cam([0.3,1.4,5.0],[0.2,0.8,0]),RESULT:cam([1.0,1.6,5.6],[0.8,0.8,0])},
+ MOTION_STAGE:{WORLD:cam([0.8,2.6,9.0],[0.3,1.0,0]),SYSTEM:cam([0.3,1.6,5.4],[0,0.9,0]),CUTAWAY:cam([0.2,1.4,5.0],[0,0.8,0]),COMPONENT:cam([0.3,1.2,4.2],[0.2,0.8,0]),ACTION:cam([0.3,1.4,5.0],[0.2,0.8,0]),RESULT:cam([1.0,1.6,5.6],[0.8,0.8,0])},
 };
-const ENV:Record<WorldTemplate,string>={TERRAIN_SUBSURFACE:'ENV_FOREST_001',ENCLOSURE:'ENV_CITY_001',OPEN_STAGE:'ENV_LAB_001'};
+const ENV:Record<WorldTemplate,string>={TERRAIN_SUBSURFACE:'ENV_FOREST_001',ENCLOSURE:'ENV_CITY_001',OPEN_STAGE:'ENV_LAB_001',MECHANISM_STAGE:'ENV_FOREST_001',MOTION_STAGE:'ENV_FOREST_001'};
 interface Roles {system:string|null;systemRelations:string[];medium:PlannerRelation|null;conduit:PlannerRelation|null;consumer:boolean;containment:PlannerRelation|null;components:PlannerRelation[]}
 function roles(input:PlannerInput):Roles{
  const subject=fold(topicSubject(input.topic)),rels=input.relations;
@@ -53,7 +57,7 @@ export function chooseTemplate(input:PlannerInput):WorldTemplate{
 }
 function buildWorld(input:PlannerInput,worldId:string):{world:PersistentWorld;r:Roles}{
  const template=chooseTemplate(input),r=roles(input),entities:WorldEntity[]=[];
- const add=(e:Omit<WorldEntity,'worldId'|'rotation'>&{rotation?:Vec3})=>entities.push({rotation:[0,0,0],...e,worldId});
+ const add=(e:Omit<WorldEntity,'worldId'|'rotation'>&{rotation?:Vec3})=>{if(input.groundedStory&&e.grounding==='FACTUAL'&&!e.relationIds.length)e={...e,grounding:'EDITORIAL',abstraction:'EDITORIAL_DECORATION',participant:null,label:null};entities.push({rotation:[0,0,0],...e,worldId});};
  const sysLabel=r.system?participantLabel(r.system):null;
  let revealed:string[]=[],cutaway:PersistentWorld['cutaway']={kind:'NONE',openAmount:0,revealsEntityIds:[]};
  if(template==='TERRAIN_SUBSURFACE'){
@@ -88,6 +92,8 @@ function buildWorld(input:PlannerInput,worldId:string):{world:PersistentWorld;r:
 /** Position of a relation inside its sentence (fraction 0..1), from its literal participants. */
 function anchor(sentence:string,r:PlannerRelation){const s=fold(sentence);for(const part of [r.object,r.subject]){const k=fold(part).split(' ').slice(0,3).join(' ');const at=k?s.indexOf(k):-1;if(at>=0)return at/Math.max(1,s.length);}return 0;}
 export function planVisualCausal(input:PlannerInput):VisualCausalPlan{
+ // Script Mode converges here: the same plan contract, built from the understood user script.
+ if(input.scriptUnderstanding)return planScriptWorld(input);
  if(!input.sentences.length||!input.timing.length)throw Error('VISUAL_PLAN_INPUT sentences/timing required');
  const known=new Set(input.relations.map(r=>r.id));
  for(const s of input.sentences)for(const rid of s.relationIds)if(!known.has(rid))throw Error('VISUAL_PLAN_INPUT sentence cites unknown relation '+rid);
@@ -139,13 +145,15 @@ export function planVisualCausal(input:PlannerInput):VisualCausalPlan{
     }
     const conduit=world.entities.find(e=>e.kind==='PATH'&&e.relationIds.includes(rel.id))!;
     const fill=world.entities.find(e=>e.kind==='CYLINDER'&&e.role==='MAIN_SYSTEM');
+    if(Number(state[conduit.entityId].connection)<1)drafts.push({...base(rel),relationIds:[],storyNodeIds:[],evidenceIds:[],grounding:'EDITORIAL_TRANSITION',visualIntent:'ROUTE_SETUP',presenterIntent:'NONE',presenterVisible:false,cameraZone:'ACTION',cameraMotivation:'Prepare the existing abstract path before movement',focusEntityId:conduit.entityId,label:null,operations:ops({operation:'CONNECT',target:conduit.entityId,parameters:{from:Number(state[conduit.entityId].connection),to:1}}),proof:null,weight:0.2,apply:b=>[change(b,conduit.entityId,'CONNECT','connection',1,null,'Abstract path setup; not an additional factual relation')]});
     drafts.push({...base(rel),grounding:'FACTUAL_DEMONSTRATION',visualIntent:'DIRECTIONAL_MOVEMENT',presenterIntent:'NONE',presenterVisible:false,cameraZone:'ACTION',cameraMotivation:'Follow the movement from its source to its destination',focusEntityId:conduit.entityId,label:null,
      operations:[{operation:'FLOW',target:conduit.entityId,parameters:{path:conduit.path,from:0,to:1,direction:'FORWARD',speed:1,amount:0.85},startOffset:0,endOffset:0.75},...(fill?[{operation:'INCREASE' as const,target:fill.entityId,parameters:{parameter:'fillLevel',from:0,to:0.8},startOffset:0.55,endOffset:1}]:[])],
      proof:{level:SURFACE.test(fold(rel.object))||!fill?'DIRECT':'PARTIAL',rationale:'Source participant, moving medium and stated destination are all shown; motion runs along the conduit'},weight:1.4,
      apply:b=>[change(b,conduit.entityId,'FLOW','flowProgress',1,rel.id,null),...(fill?[change(b,fill.entityId,'INCREASE','fillLevel',0.8,rel.id,null)]:[])]});
    }else if(p==='CAUSED_BY'||p==='CAUSES'){
     const affected=world.entities.find(e=>e.participant&&f.includes(fold(e.participant))&&e.role==='MEDIUM')??target??mainHead;
-    drafts.push({...base(rel),grounding:'FACTUAL_DEMONSTRATION',visualIntent:'CAUSE_ATTRIBUTION',presenterIntent:'NONE',presenterVisible:false,cameraZone:'COMPONENT',cameraMotivation:'Return to the participant whose behaviour is being explained',focusEntityId:affected.entityId,label:participantLabel(p==='CAUSED_BY'?rel.object:rel.subject),operations:ops({operation:'HIGHLIGHT',target:affected.entityId,parameters:{amount:0.12}}),proof:{level:'SYMBOLIC',rationale:'The cause is named on screen and its participant highlighted; the mechanism of the cause is not drawn'},weight:1.6});
+    const unsupported=input.groundedStory&&affected.grounding==='EDITORIAL',reason='No grounded participant for this cause; editorial prop cannot be visual proof';if(unsupported)gaps.push({relationId:rel.id,predicate:p,reason});
+    drafts.push({...base(rel),grounding:'FACTUAL_DEMONSTRATION',visualIntent:'CAUSE_ATTRIBUTION',presenterIntent:'NONE',presenterVisible:false,cameraZone:'COMPONENT',cameraMotivation:'Return to the participant whose behaviour is being explained',focusEntityId:affected.entityId,label:participantLabel(p==='CAUSED_BY'?rel.object:rel.subject),operations:ops({operation:'HIGHLIGHT',target:affected.entityId,parameters:{amount:0.12}}),proof:{level:unsupported?'NONE':'SYMBOLIC',rationale:unsupported?reason:'The cause is named on screen and its participant highlighted; the mechanism of the cause is not drawn'},weight:1.6});
    }else if(rel===r.conduit&&world.entities.some(e=>e.entityId==='outlet_conduit')){
     const back=cutawayOpen;cutawayOpen=false;
     drafts.push({...base(rel),grounding:'FACTUAL_DEMONSTRATION',visualIntent:'RESULT_TRANSFER',presenterIntent:'NONE',presenterVisible:false,cameraZone:'RESULT',cameraMotivation:'New state: the medium leaves the system through the conduit',focusEntityId:'outlet_conduit',label:ent('outlet_conduit')?.label??null,
@@ -171,6 +179,6 @@ export function planVisualCausal(input:PlannerInput):VisualCausalPlan{
  // Trailing editorial sentences after the last fact hold the world.
  for(const s of input.sentences.slice(firstFact).filter(s=>s.kind==='EDITORIAL')){const t=timing(s.id);schedule([{sentenceId:s.id,storyNodeIds:[],relationIds:[],evidenceIds:[],grounding:'EDITORIAL_CONTEXT',visualIntent:'RETURN_TO_WORLD',presenterIntent:'FINAL_PAYOFF',presenterVisible:true,cameraZone:'WORLD',cameraMotivation:'Return to context',focusEntityId:null,label:null,operations:[],proof:null,weight:1}],t.startFrame,t.endFrame,s.id,true);}
  beats.sort((a,b)=>a.startFrame-b.startFrame);beats.forEach((b,i)=>b.order=i);
- const raw={version:VISUAL_CAUSAL_VERSION,topic:input.topic,worldId,scriptFingerprint:input.scriptFingerprint,storyFingerprint:input.storyFingerprint,relationsFingerprint:jsonHash(input.relations),world,beats,transitions,gaps:gaps.sort((a,b)=>a.relationId.localeCompare(b.relationId,'en')),fps:input.fps,totalFrames:input.totalFrames};
- return{...raw,fingerprint:jsonHash(raw)};
+ const raw={version:VISUAL_CAUSAL_VERSION,topic:input.topic,worldId,scriptFingerprint:input.scriptFingerprint,storyFingerprint:input.storyFingerprint,relationsFingerprint:jsonHash(input.relations),world,beats,transitions,gaps:gaps.sort((a,b)=>a.relationId.localeCompare(b.relationId,'en')),fps:input.fps,totalFrames:input.totalFrames,...(input.groundedStory?{groundedStoryHandoff:{progressionFingerprint:input.groundedStory.fingerprint,beats:beats.map(b=>({beatId:b.id,roles:b.grounding==='FACTUAL_DEMONSTRATION'?input.sentences.find(s=>s.id===b.sentenceId)?.roles??[]:[],stateDescriptionIds:input.groundedStory!.states.filter(s=>b.relationIds.includes(s.relationId)).map(s=>s.id),problemSolutionRelationIds:input.groundedStory!.problemSolutionPairs.filter(p=>b.relationIds.includes(p.problemRelationId)||b.relationIds.includes(p.solutionRelationId)).flatMap(p=>[p.problemRelationId,p.solutionRelationId])}))}}:{})};
+ const result={...raw,...(input.previewOnly?{previewOnly:true as const}:{})};return{...result,fingerprint:jsonHash(result)};
 }

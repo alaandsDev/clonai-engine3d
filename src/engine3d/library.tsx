@@ -1,5 +1,6 @@
 import React from "react";
 import {CarGeometry} from './car';
+import {AircraftGeometry,AirfoilGeometry,VectorArrowGeometry} from './aeronautics';
 import type {EnvironmentState} from './demonstration-contracts';
 import {Color} from 'three';
 import {StylizedBackdrop,ContactShadow,PALETTE,type EnvironmentStyle} from './assemblies';
@@ -295,6 +296,9 @@ export function Prop({
   const open = effectiveDoorOpenProgress(i, shot, t);
   let content: React.ReactNode;
   if (id === "CAR") content=<CarGeometry frost={i.parameters?.frost??0}/>;
+  else if (id === 'AIRCRAFT') content=<AircraftGeometry/>;
+  else if (id === 'AIRFOIL') content=<AirfoilGeometry/>;
+  else if (id === 'VECTOR_ARROW') content=<VectorArrowGeometry palette={i.parameters?.palette??0}/>;
   else if (id === "DOOR")
     content = (
       <>
@@ -451,8 +455,8 @@ export function Environment({ id, state, style }: { id: string;state?:Environmen
   const forest = ["FOREST", "DEAD_FOREST", "WINTER"].includes(name);
   return (
     <>
-      <color attach="background" args={[style?'#e3efe9':bg]} />
-      <fog attach="fog" args={[style?'#e3efe9':bg, (style?18:12)-(state?.fogIntensity??0)*8, (style?60:28)-(state?.fogIntensity??0)*18]} />
+      <color attach="background" args={[style?.setting==='SKY'?'#bfe0f4':style?.setting==='INDOOR'?'#efe6da':style?'#e3efe9':bg]} />
+      <fog attach="fog" args={[style?.setting==='SKY'?'#cfe8f7':style?.setting==='INDOOR'?'#efe6da':style?'#e3efe9':bg, style?.setting==='SKY'?30:(style?18:12)-(state?.fogIntensity??0)*8, style?.setting==='SKY'?140:(style?60:28)-(state?.fogIntensity??0)*18]} />
       <ambientLight intensity={style?0.55:1.3} />
       <directionalLight
         position={[-4, 8, 5]}
@@ -462,7 +466,7 @@ export function Environment({ id, state, style }: { id: string;state?:Environmen
       <directionalLight position={[4, 3, -2]} intensity={1.2} color="#9abddd" />
       <group visible={state?.visibility??true}>
       {style?<StylizedBackdrop style={style} ground={'#'+new Color(forest?PALETTE.GRASS:baseGround).multiply(new Color(state?.tint??'#ffffff')).getHexString()} sky={['#7fb8e6','#e6f2ec']}/>:(state?.groundCutaway??0)>0?<>{[-1,1].map(side=><Box key={side} at={[side*(25+(state!.groundCutaway*3)), -.15,0]} size={[50,.25,100]} color={ground}/>)}</>:<Box at={[0, -0.15, 0]} size={[100, 0.25, 100]} color={ground} />}
-      {forest ? (
+      {forest && style?.setting !== 'SKY' && style?.setting !== 'WATER' && style?.setting !== 'INDOOR' ? (
         Array.from({ length: 12 }, (_, n) => {
           const x = (n % 2 ? -1 : 1) * (2.8 + seeded(n + 4) * 4),
             z = -2 - seeded(n + 9) * 10;

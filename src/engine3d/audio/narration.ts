@@ -71,6 +71,32 @@ export class FakeNarrationProvider implements NarrationProvider {
     await writeFile(output, b);
   }
 }
+export const TTS_RETRY = Object.freeze({ attempts: 3, backoffMs: [800, 2000] });
+/** Runs fn up to `attempts` times with a short fixed backoff; the last error is rethrown with the attempt count. */
+export async function withRetry<T>(
+  fn: () => Promise<T>,
+  policy: { attempts: number; backoffMs: readonly number[] } = TTS_RETRY,
+  onRetry?: (attempt: number, error: unknown) => void,
+  sleep: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms)),
+): Promise<T> {
+  let last: unknown;
+  for (let attempt = 1; attempt <= policy.attempts; attempt++) {
+    try {
+      return await fn();
+    } catch (e) {
+      last = e;
+      if (attempt < policy.attempts) {
+        onRetry?.(attempt, e);
+        await sleep(policy.backoffMs[Math.min(attempt - 1, policy.backoffMs.length - 1)] ?? 0);
+      }
+    }
+  }
+  if (last instanceof Error) {
+    last.message += ` (failed after ${policy.attempts} attempts)`;
+    throw last;
+  }
+  throw new Error(`failed after ${policy.attempts} attempts: ${String(last)}`);
+}
 export const cacheKey = (
   text: string,
   config: NarrationConfig,
@@ -148,14 +174,22 @@ export async function narration(
   if (!hit) {
     const temporary =
       file + ".tmp." + (provider.name === "fake" ? "wav" : "mp3");
-    try {
-      await provider.synthesize(spoken, temporary, config);
-      await probeDuration(temporary);
-      await rename(temporary, file);
-    } catch (e) {
-      await rm(temporary, { force: true });
-      throw e;
-    }
+    // Bounded retry for transient provider failures (cache misses only; a permanent error still surfaces).
+    await withRetry(
+      async () => {
+        try {
+          await provider.synthesize(spoken, temporary, config);
+          await probeDuration(temporary);
+          await rename(temporary, file);
+        } catch (e) {
+          await rm(temporary, { force: true });
+          throw e;
+        }
+      },
+      TTS_RETRY,
+      (attempt, error) =>
+        console.warn(`${sceneId}: TTS attempt ${attempt}/${TTS_RETRY.attempts} failed, retrying (${String(error).slice(0, 120)})`),
+    );
   }
   const durationSeconds = await probeDuration(file);
   console.log(`${sceneId}: CACHE ${hit ? "HIT" : "MISS"}`);

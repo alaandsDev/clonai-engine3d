@@ -61,7 +61,11 @@
     "check:contextual-mechanism": "tsx --test tests/contextual-mechanism.test.ts",
     "curiosity:run": "tsx cli/curiosity.ts",
     "vertical:run": "tsx cli/vertical-slice.ts",
-    "check:visual-causal": "tsx --test tests/visual-causal.test.ts"
+    "check:visual-causal": "tsx --test tests/visual-causal.test.ts",
+    "check:progressive-curiosity": "tsx --test tests/progressive-curiosity.test.ts",
+    "check:contextual-parser": "tsx --test tests/contextual-parser.test.ts",
+    "clonai:script": "tsx cli/script-mode.ts",
+    "check:script-mode": "tsx --test tests/script-mode.test.ts"
   },
   "dependencies": {
     "@react-three/fiber": "8.18.0",

@@ -74,7 +74,7 @@ export function ProceduralShot({ shot: input, directed,worldExtras,environmentSt
             right: "8%",
             color: "white",
             fontFamily: "Trebuchet MS",
-            fontSize: 30,
+            fontSize: 30 * width / 480,
             fontWeight: 900,
             textAlign: "center",
             textShadow: "0 2px 6px #12263b",
@@ -159,11 +159,11 @@ export function SequenceRenderer({
           <div
             style={{
               background: "rgba(13,26,41,.9)",
-              borderRadius: 18,
-              padding: "14px 20px",
+              borderRadius: 18 * sequence.width / 480,
+              padding: `${14 * sequence.width / 480}px ${20 * sequence.width / 480}px`,
               color: "#fff",
               fontFamily: "Trebuchet MS",
-              fontSize: 32,
+              fontSize: 32 * sequence.width / 480,
               lineHeight: 1.2,
               fontWeight: 900,
               textAlign: "center",
