@@ -65,7 +65,9 @@
     "check:progressive-curiosity": "tsx --test tests/progressive-curiosity.test.ts",
     "check:contextual-parser": "tsx --test tests/contextual-parser.test.ts",
     "clonai:script": "tsx cli/script-mode.ts",
-    "check:script-mode": "tsx --test tests/script-mode.test.ts"
+    "check:script-mode": "tsx --test tests/script-mode.test.ts",
+    "check:production": "tsx --test tests/production-preflight.test.ts",
+    "check:hybrid-editorial": "tsx --test tests/hybrid-editorial.test.ts"
   },
   "dependencies": {
     "@react-three/fiber": "8.18.0",

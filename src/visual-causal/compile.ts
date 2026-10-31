@@ -124,6 +124,7 @@ export function compileVisualPlan(plan:VisualCausalPlan,timing:CompileTiming):Di
   initialState:{actors:p.offstage?{}:{[p.entityId]:{position:startPos,facing:1.3}},props:{},camera:motion?.initial??cinema?.initial??beatCamera(plan.beats[0]),demonstration:program.initialState},finalState:{actors:{},props:{},camera:current},
   blocking:p.offstage?[]:blocking,actionSegments:p.offstage?[]:actions,cameraSegments:cams,focusSegments:focus,propMotions:[],
   shots:cinema?[...new Set([0,...cuts,total])].sort((a,b)=>a-b).slice(0,-1).map((startFrame,i,starts)=>({id:'shot_'+String(i+1).padStart(2,'0'),startFrame,endFrame:starts[i+1]??total,transition:(cuts.has(startFrame)?'CUT':'CONTINUE') as 'CUT'|'CONTINUE'})):plan.beats.map(b=>({id:'shot_'+String(b.order+1).padStart(2,'0'),startFrame:b.startFrame,endFrame:b.endFrame,transition:(cuts.has(b.startFrame)?'CUT':'CONTINUE') as 'CUT'|'CONTINUE',...(b.label?{onScreenText:b.label}:{})})),captions:caps,demonstration:program};
+ if(plan.hybridEditorial)seq.hybridEditorial=structuredClone(plan.hybridEditorial);
  const end=evaluateDirected(seq,total).state;seq.finalState=end;
  return validateDirected(seq);
 }

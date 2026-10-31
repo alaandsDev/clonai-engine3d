@@ -1,0 +1,10 @@
+import {readFileSync,writeFileSync,existsSync,mkdirSync} from 'node:fs';
+import path from 'node:path';
+import {productionPreflight} from '../../src/production/preflight';
+import {visualQa} from '../../src/visual-causal/qa';
+import {jsonHash} from '../../src/editorial/fingerprint';
+const source=process.argv[2];if(!source)throw Error('Usage: historical-audit <existing out/engine3d/script-mode directory>');
+const out='out/production-bible';mkdirSync(out,{recursive:true});
+const cases=['roteiro-aviao-zero-shot','roteiro-geladeira-v3-FROZEN-benchmark','roteiro-lavadora-zero-shot','../dev-preview/containment-a','../phase27b/final','../phase28b/well'];
+const rows=cases.map(name=>{const dir=path.join(source,name);try{const read=(n:string)=>JSON.parse(readFileSync(path.join(dir,n),'utf8'));const input=read('planner-input.json'),plan=read('visual-plan.json'),seq=read('directed-sequence.json');const before=jsonHash({input,plan,seq});const qa=visualQa(plan,seq);const r=productionPreflight({input,plan,sequence:seq,qa});if(before!==jsonHash({input,plan,seq}))throw Error('Audit mutated artifacts');writeFileSync(path.join(out,name.replace(/[^a-zA-Z0-9_-]/g,'_')+'.json'),JSON.stringify(r,null,2));return{name,status:r.productionReady?'READY':'BLOCKED',blockers:r.blockers.map(b=>b.code),warnings:r.warnings.map(b=>b.code),sourceFingerprint:before};}catch(e){return{name,status:'NOT_EVALUATED',reason:String(e)};}});
+writeFileSync(path.join(out,'historical-results.json'),JSON.stringify(rows,null,2));console.log(JSON.stringify(rows,null,2));

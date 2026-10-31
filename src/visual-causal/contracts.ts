@@ -78,6 +78,8 @@ export interface PlannerRelation {id:string;subject:string;predicate:string;obje
  source?:'USER_SCRIPT';scriptSpans?:{start:number;end:number}[]}
 export interface PlannerSentence {id:string;kind:'FACT'|'EDITORIAL';text:string;relationIds:string[];roles:string[]}
 export interface PlannerInput {
+ /** Opt-in for legacy callers; enabled by the certified Script Mode production path. */
+ hybridEditorial?:import('../editorial/hybrid-contracts').HybridEditorialOptions;
  /** A grounded candidate may be inspected without authorizing production. */
  previewOnly?:true;
  groundedStory?:ReturnType<typeof import('../curiosity/progression').groundedProgression>;
@@ -89,6 +91,7 @@ export interface PlannerInput {
  scriptUnderstanding?:import('../script-mode/contracts').ScriptUnderstanding;
 }
 export interface VisualCausalPlan {
+ hybridEditorial?:import('../editorial/hybrid-contracts').HybridEditorialTrack;
  /** Phase29: demonstrations selected for the script ideas, and direction stats (subject versions, stage switches). */
  demonstrations?:import('./demonstrations').VisualDemonstrationIntent[];
  /** Phase29 bridge: mechanism relations → carriers (what is shown, where, with which support) and recorded gaps. */

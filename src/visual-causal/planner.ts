@@ -5,6 +5,7 @@ import type {Vec3} from '../engine3d/contracts';
 import type {CameraState} from '../engine3d/directed';
 import {VISUAL_CAUSAL_VERSION} from './contracts';
 import {planScriptWorld} from './script-world';
+import {withHybridEditorial} from './editorial-grammar';
 import type {BeatOperation,CameraZone,CausalVisualBeat,PersistentWorld,PlannerInput,PlannerRelation,PresenterIntent,VisualCausalPlan,VisualGap,VisualStateTransition,WorldEntity,WorldTemplate} from './contracts';
 /** Closed generic cue tables (spatial language, not topic nouns). */
 const SUBSURFACE=/subterr|subsolo|aquifer|lencol|freatic|underground|groundwater|subsurface/;
@@ -93,7 +94,7 @@ function buildWorld(input:PlannerInput,worldId:string):{world:PersistentWorld;r:
 function anchor(sentence:string,r:PlannerRelation){const s=fold(sentence);for(const part of [r.object,r.subject]){const k=fold(part).split(' ').slice(0,3).join(' ');const at=k?s.indexOf(k):-1;if(at>=0)return at/Math.max(1,s.length);}return 0;}
 export function planVisualCausal(input:PlannerInput):VisualCausalPlan{
  // Script Mode converges here: the same plan contract, built from the understood user script.
- if(input.scriptUnderstanding)return planScriptWorld(input);
+ if(input.scriptUnderstanding)return withHybridEditorial(input,planScriptWorld(input));
  if(!input.sentences.length||!input.timing.length)throw Error('VISUAL_PLAN_INPUT sentences/timing required');
  const known=new Set(input.relations.map(r=>r.id));
  for(const s of input.sentences)for(const rid of s.relationIds)if(!known.has(rid))throw Error('VISUAL_PLAN_INPUT sentence cites unknown relation '+rid);
@@ -180,5 +181,5 @@ export function planVisualCausal(input:PlannerInput):VisualCausalPlan{
  for(const s of input.sentences.slice(firstFact).filter(s=>s.kind==='EDITORIAL')){const t=timing(s.id);schedule([{sentenceId:s.id,storyNodeIds:[],relationIds:[],evidenceIds:[],grounding:'EDITORIAL_CONTEXT',visualIntent:'RETURN_TO_WORLD',presenterIntent:'FINAL_PAYOFF',presenterVisible:true,cameraZone:'WORLD',cameraMotivation:'Return to context',focusEntityId:null,label:null,operations:[],proof:null,weight:1}],t.startFrame,t.endFrame,s.id,true);}
  beats.sort((a,b)=>a.startFrame-b.startFrame);beats.forEach((b,i)=>b.order=i);
  const raw={version:VISUAL_CAUSAL_VERSION,topic:input.topic,worldId,scriptFingerprint:input.scriptFingerprint,storyFingerprint:input.storyFingerprint,relationsFingerprint:jsonHash(input.relations),world,beats,transitions,gaps:gaps.sort((a,b)=>a.relationId.localeCompare(b.relationId,'en')),fps:input.fps,totalFrames:input.totalFrames,...(input.groundedStory?{groundedStoryHandoff:{progressionFingerprint:input.groundedStory.fingerprint,beats:beats.map(b=>({beatId:b.id,roles:b.grounding==='FACTUAL_DEMONSTRATION'?input.sentences.find(s=>s.id===b.sentenceId)?.roles??[]:[],stateDescriptionIds:input.groundedStory!.states.filter(s=>b.relationIds.includes(s.relationId)).map(s=>s.id),problemSolutionRelationIds:input.groundedStory!.problemSolutionPairs.filter(p=>b.relationIds.includes(p.problemRelationId)||b.relationIds.includes(p.solutionRelationId)).flatMap(p=>[p.problemRelationId,p.solutionRelationId])}))}}:{})};
- const result={...raw,...(input.previewOnly?{previewOnly:true as const}:{})};return{...result,fingerprint:jsonHash(result)};
+ const result={...raw,...(input.previewOnly?{previewOnly:true as const}:{})};return withHybridEditorial(input,{...result,fingerprint:jsonHash(result)});
 }

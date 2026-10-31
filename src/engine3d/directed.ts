@@ -5,6 +5,7 @@ import { resolveShot, resource, parameters } from './validation';
 import { poseAt, type Pose, cameraAt } from './motion';
 import type {DemonstrationProgram,DemonstrationState} from './demonstration-contracts';
 import {evaluateDemonstration,validateDemonstrationProgram,stateEqual} from './demonstration-runtime';
+import {validateHybridTrack,type HybridEditorialTrack} from '../editorial/hybrid-contracts';
 export type Easing = 'LINEAR' | 'EASE_IN' | 'EASE_OUT' | 'EASE_IN_OUT';
 export type MovementType = 'STAY' | 'STEP' | 'WALK' | 'APPROACH' | 'RETREAT' | 'SIDESTEP' | 'TURN';
 export type BlockingIntent = 'PRESENT_OBJECT' | 'REVEAL_OBJECT' | 'MAKE_SPACE_FOR_TEXT' | 'OBSERVE' | 'INTERACT' | 'REACT' | 'ENTER_SCENE' | 'EXIT_SCENE';
@@ -86,6 +87,7 @@ export interface FocusSegment extends Segment {
     target: FocusTarget;
 }
 export interface DirectedSequence {
+    hybridEditorial?:HybridEditorialTrack;
     demonstration?:DemonstrationProgram;
     version: 1;
     id: string;
@@ -174,7 +176,7 @@ function noOverlap<T extends Segment>(items: T[], key: (s: T) => string) { for (
             fail('DIRECTED_SCHEMA', 'overlapping tracks'); }
 export function validateDirected(input: DirectedSequence): DirectedSequence {
     const s = structuredClone(input);
-    fields(s, ['version', 'id', 'fps', 'width', 'height', 'totalFrames', 'baseShot', 'initialState', 'finalState', 'blocking', 'actionSegments', 'cameraSegments', 'focusSegments', 'propMotions', 'shots', 'captions','demonstration'], 'DirectedSequence');
+    fields(s, ['version', 'id', 'fps', 'width', 'height', 'totalFrames', 'baseShot', 'initialState', 'finalState', 'blocking', 'actionSegments', 'cameraSegments', 'focusSegments', 'propMotions', 'shots', 'captions','demonstration','hybridEditorial'], 'DirectedSequence');
     if (s.version !== 1)
         fail('DIRECTED_SCHEMA', 'version');
     text(s.id, 'id');
@@ -184,6 +186,7 @@ export function validateDirected(input: DirectedSequence): DirectedSequence {
     int(s.totalFrames, 1, 14400);
     if (s.width % 2 || s.height % 2)
         fail('DIRECTED_SCHEMA', 'even canvas');
+    if(s.hybridEditorial)validateHybridTrack(s.hybridEditorial,s.totalFrames);
     s.baseShot = resolveShot(s.baseShot);
     if (Math.abs(s.baseShot.durationSeconds * s.fps - s.totalFrames) > 1e-6)
         fail('DIRECTED_SCHEMA', 'duration mismatch');

@@ -10,6 +10,7 @@ const r=await generateFromScript({scriptPath,scriptText,outDir,label:get('--labe
 const s=r.summary,m=s.mp4 as {path?:string;duration?:number;passed?:boolean}|null;
 console.log(['ClonAI Script Mode — USER_SCRIPT → MP4',
  'video:      '+(m?.path??'(not rendered)'),
+ 'preflight:  PRODUCTION_READY: '+(s.productionPreflight.productionReady?'YES':'NO')+' — '+s.productionPreflight.decision,
  'duration:   '+(m?.duration?.toFixed(2)??'-')+' s  valid='+(m?.passed??'-'),
  'coverage:   '+s.coverage.coveragePercent+'%  (DIRECT '+s.coverage.DIRECT+', PARTIAL '+s.coverage.PARTIAL+', SYMBOLIC '+s.coverage.SYMBOLIC+', EDITORIAL '+s.coverage.EDITORIAL+', UNREPRESENTED '+s.coverage.UNREPRESENTED+')',
  'gaps:       '+(s.gaps.length?s.gaps.map(g=>g.predicate+': '+g.reason).join(' | '):'none'),
@@ -25,3 +26,4 @@ console.log(['ClonAI Script Mode — USER_SCRIPT → MP4',
  'network:    research 0, external in-process '+s.network.externalInProcessCalls+', TTS service sentences '+s.network.ttsServiceSentences+' (cached '+s.network.ttsCachedSentences+')',
  'time:       render '+(s.performance.renderMs/1000).toFixed(1)+' s, total '+(s.performance.totalMs/1000).toFixed(1)+' s',
  'artifacts:  '+outDir].join('\n'));
+if(!s.productionPreflight.productionReady&&!args.includes('--no-render'))process.exitCode=1;
