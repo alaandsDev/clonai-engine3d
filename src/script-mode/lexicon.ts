@@ -13,7 +13,7 @@ export const DISCOURSE:{role:'GOAL'|'ATTEMPT'|'PROBLEM'|'CAUSE'|'SOLUTION'|'STAT
 ];
 export const HYPOTHESIS=/^(?:e se|e quando|entao seria|seria so|sera que|e por que|what if|and if|suppose|imagine se)\b/;
 export const CONDITIONAL=/\b\w{2,}(?:aria|eria|iria|ariam|eriam|iriam)\b|\b(?:would|could|might|poderia|poderiam)\b/;
-export const NEGATION=/\b(?:nao|nunca|jamais|nem|not|never|no longer|nenhum|nenhuma)\b/;
+export const NEGATION=/\b(?:nao|nunca|jamais|nem|not|never|no longer|nenhum|nenhuma|ninguem|nobody|no one)\b/;
 export const ADDRESS=/\b(?:voce|voces|vc|you|your|imagine|veja|repare|olha)\b/;
 /** Clause triggers: the shared mechanism lexicon (Phase26/28B) plus script-only state/transfer verbs. */
 export const STATE_WORDS:Record<string,string>={aberto:'OPEN',aberta:'OPEN',abertos:'OPEN',abertas:'OPEN',open:'OPEN',fechado:'CLOSED',fechada:'CLOSED',fechados:'CLOSED',fechadas:'CLOSED',closed:'CLOSED',shut:'CLOSED',cheio:'FULL',cheia:'FULL',full:'FULL',vazio:'EMPTY',vazia:'EMPTY',empty:'EMPTY',ligado:'ON',ligada:'ON',on:'ON',desligado:'OFF',desligada:'OFF',off:'OFF',parado:'STOPPED',parada:'STOPPED',stopped:'STOPPED'};
@@ -141,3 +141,8 @@ export const OBJECT_CONTEXT:{category:string;context:'KITCHEN_LIKE'|'BATHROOM_LI
 ];
 /** Outdoor places: when the script names one, a housed machine is not staged indoors. */
 export const OUTDOOR_PLACE=/^(?:campo|campos|rio|rios|mar|oceano|ceu|rua|ruas|estrada|jardim|quintal|fazenda|floresta|montanha|praia|deserto|lavoura|plantacao|terreno|lago|represa|poco|horta)$/;
+/** Discourse time cues (explainer overlay): going back to the start, or jumping ahead in time. */
+export const REWIND_CUE=/\b(?:vamos voltar|vamos recomecar|voltando ao (?:inicio|comeco)|de volta ao (?:inicio|comeco)|voltemos|rebobina\w*|let'?s go back|rewind)\b/;
+export const FORWARD_CUE=/\b(?:(?:alguns|poucos|muitos|varios|dois|tres) (?:minutos|horas|dias|semanas|meses|anos) depois|depois de (?:alguns|poucos|muitos|varios) (?:minutos|horas|dias|semanas|meses|anos)|com o (?:passar do )?tempo|mais tarde|no dia seguinte|ao meio dia|a noite|de noite|anos depois|meses depois|later|years later|months later|at night)\b/;
+/** Opening of a hypothetical episode ("Imagine que…", "E se…", "Suponha que…"): shown, then undone at the rewind cue. */
+export const HYPOTHESIS_CUE=/^(?:imagine|imagina|suponha|supondo|digamos que|e se|vamos supor|what if|imagine that|suppose)\b/;

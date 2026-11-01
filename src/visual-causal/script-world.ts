@@ -3,7 +3,7 @@ import type {Vec3} from '../engine3d/contracts';
 import type {CameraState} from '../engine3d/directed';
 import type {Assembly} from '../engine3d/demonstration-contracts';
 import type {ClaimAction,ScriptEntity,ScriptUnderstanding} from '../script-mode/contracts';
-import {NON_NOMINAL,VESSEL,LID,PEG,GAS,OBJECT_CONTEXT,PLACE_CONTEXT,OUTDOOR_PLACE} from '../script-mode/lexicon';
+import {NON_NOMINAL,VESSEL,LID,PEG,GAS,OBJECT_CONTEXT,PLACE_CONTEXT,OUTDOOR_PLACE,HYPOTHESIS_CUE,REWIND_CUE} from '../script-mode/lexicon';
 import {DEMONSTRATION_LIMITS} from '../engine3d/demonstration-contracts';
 import {VISUAL_CAUSAL_VERSION} from './contracts';
 import {hasMotionSubject,planMotionWorld} from './motion-world';
@@ -13,6 +13,7 @@ import {planMechanismCarriers} from './mechanism-bridge';
 import {cameraSpaceOf,scaleOf,OCCUPANCY_THRESHOLDS} from './camera-space';
 import {assignFunctionalForms,POWERED_FORMS} from './functional-form';
 import {planContainment,type PhysicalCarrier} from './containment';
+import {planEnergyFlow} from './energy-flow';
 import type {BeatOperation,CameraZone,CausalVisualBeat,PersistentWorld,PlannerInput,VisualCausalPlan,VisualGap,VisualScope,VisualScopeEntry,VisualStateTransition,WorldEntity} from './contracts';
 /** Phase29 Script Mode world: a generic MECHANISM_STAGE built from the script's entity inventory and
  * actions (what happens), then filmed (camera zones from the layout). Positions, colours, supports and
@@ -200,12 +201,21 @@ export function planScriptWorld(input:PlannerInput):VisualCausalPlan{
  const forms=assignFunctionalForms(u,entities,layout,known);
  // Containment class (containers, rotation with content, crossing a boundary, actuator + route): generic physical relations
  // get their own parts and carriers; the bridge's generic carriers for those same relations step aside.
- const phys=planContainment(u,entities,layout,worldId,known,{fps:input.fps,total:input.totalFrames,startOf:sid=>timing(sid).startFrame});
+ const phys=planContainment(u,entities,layout,worldId,known,{fps:input.fps,total:input.totalFrames,startOf:sid=>timing(sid).startFrame,read:(id,p)=>{const v=state[id]?.[p];return typeof v==='number'?v:undefined;}});
  if(phys){const own=new Set(phys.handled),drop=new Set(mech.carriers.filter(c=>own.has(c.relationId)).map(c=>c.entityId));
   for(let i=mech.carriers.length-1;i>=0;i--)if(own.has(mech.carriers[i].relationId))mech.carriers.splice(i,1);
   for(let i=mech.gaps.length-1;i>=0;i--)if(own.has(mech.gaps[i].relationId))mech.gaps.splice(i,1);
   for(const id of drop)if(!mech.carriers.some(c=>c.entityId===id)){const k=entities.findIndex(e=>e.entityId===id);if(k>=0)entities.splice(k,1);carrierIds.delete(id);}
   mech.gaps.push(...phys.gaps);for(const id of phys.carrierIds)carrierIds.add(id);}
+ // Energy-flow class (radiant source → collector → carriers → conductor → converter → consumers / grid): same contract.
+ const energy=planEnergyFlow(u,entities,layout,worldId,known,{read:(id,p)=>{const v=state[id]?.[p];return typeof v==='number'?v:typeof v==='boolean'?(v?1:0):undefined;}});
+ if(energy){const own=new Set(energy.handled),drop=new Set(mech.carriers.filter(c=>own.has(c.relationId)).map(c=>c.entityId));
+  for(let i=mech.carriers.length-1;i>=0;i--)if(own.has(mech.carriers[i].relationId))mech.carriers.splice(i,1);
+  for(let i=mech.gaps.length-1;i>=0;i--)if(own.has(mech.gaps[i].relationId))mech.gaps.splice(i,1);
+  for(const id of drop){const k=entities.findIndex(e=>e.entityId===id);if(k>=0)entities.splice(k,1);carrierIds.delete(id);}
+  mech.gaps.push(...energy.gaps);for(const id of energy.carrierIds)carrierIds.add(id);
+  // A housing the energy drawing removed (its parts are drawn by this class) no longer frames the scene.
+  if(layout.enclosure&&!entities.includes(layout.enclosure)){layout.enclosure=null;layout.inside.length=0;layout.behind.length=0;}}
  // ---- Editorial carriers drawn only along relations already stated: a question's anticipation and the payoff recap ----
  const editorialPaths=planEditorialPaths();for(const p of Object.values(editorialPaths))if(p){entities.push(p.entity);carrierIds.add(p.entity.entityId);}
  for(const e of entities)if(carrierIds.has(e.entityId))e.initiallyVisible=false;
@@ -215,19 +225,21 @@ export function planScriptWorld(input:PlannerInput):VisualCausalPlan{
  const priority=(w:WorldEntity)=>(w.role==='MAIN_SYSTEM'?1000:0)+w.relationIds.length*10+worldSegs(w).length;
  const windowOf=(w:WorldEntity):[number,number]=>{const s=worldSegs(w).map(x=>segOrder.get(x)!);return s.length?[Math.min(...s),Math.max(...s)]:[0,u.segments.length-1];};
  // Mechanism carriers are short events / local states with their own lifecycle (below), not world objects.
- const loadAt=(i:number)=>entities.filter(w=>!carrierIds.has(w.entityId)&&(w.initiallyVisible||(windowOf(w)[0]<=i&&i<=windowOf(w)[1]))).length;
- const persistentCount=()=>entities.filter(w=>w.initiallyVisible).length;
- while(persistentCount()>budget){const v=entities.filter(w=>w.initiallyVisible&&w.grounding==='FACTUAL'&&w.role!=='MAIN_SYSTEM').sort((a,b)=>priority(a)-priority(b)||a.entityId.localeCompare(b.entityId,'en'))[0];if(!v)break;v.initiallyVisible=false;for(const id of v.scriptEntityIds??[])scope.set(id,{scope:'BEAT_LOCAL',reason:'Demoted from persistent: simultaneous visual budget '+budget});}
+ const STAGING=new Set(['RADIANT_SOURCE','SHADE_TREE','NEIGHBORHOOD','INTERIOR_ROOM']);
+ const loadAt=(i:number)=>entities.filter(w=>!carrierIds.has(w.entityId)&&!STAGING.has(w.assembly??'')&&(w.initiallyVisible||(windowOf(w)[0]<=i&&i<=windowOf(w)[1]))).length;
+ const persistentCount=()=>entities.filter(w=>w.initiallyVisible&&!STAGING.has(w.assembly??'')).length;
+ const classParts=new Set([...Object.values(phys?.entityIds??{}),...Object.values(energy?.entityIds??{})]);
+ while(persistentCount()>budget){const v=entities.filter(w=>w.initiallyVisible&&w.grounding==='FACTUAL'&&w.role!=='MAIN_SYSTEM'&&!classParts.has(w.entityId)).sort((a,b)=>priority(a)-priority(b)||a.entityId.localeCompare(b.entityId,'en'))[0];if(!v)break;v.initiallyVisible=false;for(const id of v.scriptEntityIds??[])scope.set(id,{scope:'BEAT_LOCAL',reason:'Demoted from persistent: simultaneous visual budget '+budget});}
 
  const dropped:WorldEntity[]=[];
  const demote=(v:WorldEntity)=>{v.initiallyVisible=false;for(const id of v.scriptEntityIds??[])scope.set(id,{scope:'BEAT_LOCAL',reason:'Demoted from persistent: simultaneous visual budget '+budget});};
  for(let i=0;i<u.segments.length;i++)while(loadAt(i)>budget){
   // First make room with a persistent object that this segment does not need; only then leave something out.
-  const idle=entities.filter(w=>w.initiallyVisible&&w.grounding==='FACTUAL'&&w.role!=='MAIN_SYSTEM'&&w.kind!=='PATH'&&!(windowOf(w)[0]<=i&&i<=windowOf(w)[1])).sort((a,b)=>priority(a)-priority(b)||a.entityId.localeCompare(b.entityId,'en'))[0];
+  const idle=entities.filter(w=>w.initiallyVisible&&w.grounding==='FACTUAL'&&w.role!=='MAIN_SYSTEM'&&w.kind!=='PATH'&&!classParts.has(w.entityId)&&!(windowOf(w)[0]<=i&&i<=windowOf(w)[1])).sort((a,b)=>priority(a)-priority(b)||a.entityId.localeCompare(b.entityId,'en'))[0];
   if(idle){demote(idle);continue;}
   const v=entities.filter(w=>!w.initiallyVisible&&!carrierIds.has(w.entityId)&&windowOf(w)[0]<=i&&i<=windowOf(w)[1]).sort((a,b)=>priority(a)-priority(b)||a.entityId.localeCompare(b.entityId,'en'))[0];if(!v)break;entities.splice(entities.indexOf(v),1);dropped.push(v);for(const id of v.scriptEntityIds??[])scope.set(id,{scope:'BUDGET_GAP',reason:'Would exceed '+budget+' simultaneously visible objects in segment '+u.segments[i].id});}
  if(entities.length>DEMONSTRATION_LIMITS.subjectsTotal)throw Error('SCRIPT_WORLD world exceeds hard ceiling ('+entities.length+'/'+DEMONSTRATION_LIMITS.subjectsTotal+' objects) after scope planning');
- if(entities.filter(w=>w.initiallyVisible).length>budget)throw Error('SCRIPT_WORLD persistent objects exceed the simultaneous budget after demotion');
+ if(entities.filter(w=>w.initiallyVisible&&!STAGING.has(w.assembly??'')).length>budget)throw Error('SCRIPT_WORLD persistent objects exceed the simultaneous budget after demotion');
  const visualScope:VisualScopeEntry[]=u.entities.map(e=>{const sc=scope.get(e.id)!,w=entities.find(x=>x.scriptEntityIds?.includes(e.id))??(sc.host?entities.find(x=>x.scriptEntityIds?.includes(sc.host!)):undefined);return{scriptEntityId:e.id,label:e.label,role:e.role,scope:sc.scope,worldEntityId:w?.entityId??null,segments:segsOf(e),reason:sc.reason};});
  const maxSimultaneousVisible=Math.max(...u.segments.map((_,i)=>loadAt(i)));
  // ---- Camera zones from the layout ----
@@ -264,8 +276,10 @@ export function planScriptWorld(input:PlannerInput):VisualCausalPlan{
  // 4) the neutral default.
  const powered=entities.some(e=>e.assembly==='MACHINE_UNIT'||e.variant==='PUMP_LIKE'||Boolean(e.form&&POWERED_FORMS.has(e.form))||e.assembly==='ROTATING_CONTAINER'&&Boolean(phys?.model.rotating.some(r=>phys.entityIds[r.subject]===e.entityId)));
  const structural=layout.enclosure&&powered&&!words.some(w=>OUTDOOR_PLACE.test(w))?{category:'STRUCTURAL_HOUSED_MACHINE',context:'NEUTRAL_INTERIOR' as const}:undefined;
- const hit=place?{category:'STATED_PLACE',context:place.context}:OBJECT_CONTEXT.find(c=>candidates.some(h=>c.pattern.test(h)))??structural,sceneContext={category:hit?.category??null,context:hit?.context??'OUTDOOR_GROUND',reason:hit?(hit===structural?'Closed housing with powered parts inside (structure, no room type claimed): neutral interior (staging)':'Main object category '+hit.category+' (staging choice)'):'No indoor category: default outdoor ground'};
- if(hit&&hit.context!=='OUTDOOR_GROUND'){const sol=entities.filter(e=>e.kind!=='PATH'),minX=Math.min(...sol.map(e=>e.position[0]-e.size[0]/2)),maxX=Math.max(...sol.map(e=>e.position[0]+e.size[0]/2)),minZ=Math.min(...sol.map(e=>e.position[2]-e.size[2]/2));
+ const exterior=energy?.model.building?{category:'STATED_BUILDING_EXTERIOR',context:'RESIDENTIAL_EXTERIOR' as const}:undefined;
+ const hit=exterior??(place?{category:'STATED_PLACE',context:place.context}:undefined)??OBJECT_CONTEXT.find(c=>candidates.some(h=>c.pattern.test(h)))??structural,sceneContext={category:hit?.category??null,context:hit?.context??'OUTDOOR_GROUND',reason:hit?(hit===structural?'Closed housing with powered parts inside (structure, no room type claimed): neutral interior (staging)':'Main object category '+hit.category+' (staging choice)'):'No indoor category: default outdoor ground'};
+ if(hit&&hit.context==='RESIDENTIAL_EXTERIOR')entities.push({entityId:'context_neighborhood',worldId,role:'CONTEXT_PROP',grounding:'EDITORIAL',abstraction:'EDITORIAL_DECORATION',relationIds:[],participant:null,label:null,scriptEntityIds:[],kind:'CYLINDER',assembly:'NEIGHBORHOOD',size:[4,1,4],position:[0,0,0],rotation:[0,0,0],color:'#ffffff',initiallyVisible:true});
+ else if(hit&&hit.context!=='OUTDOOR_GROUND'){const sol=entities.filter(e=>e.kind!=='PATH'),minX=Math.min(...sol.map(e=>e.position[0]-e.size[0]/2)),maxX=Math.max(...sol.map(e=>e.position[0]+e.size[0]/2)),minZ=Math.min(...sol.map(e=>e.position[2]-e.size[2]/2));
   // Neutral staging clearance: the object stands well away from the back wall, so rear parts can be filmed from inside the room.
   const W2=maxX-minX+10,D=10;entities.push({entityId:'context_room',worldId,role:'CONTEXT_PROP',grounding:'EDITORIAL',abstraction:'EDITORIAL_DECORATION',relationIds:[],participant:null,label:null,scriptEntityIds:[],kind:'CYLINDER',assembly:'INTERIOR_ROOM',...(hit.context==='DOMESTIC_INTERIOR'?{}:{variant:hit.context as 'KITCHEN_LIKE'}),size:r3([W2/4,3.4/4,D/4]),position:r3([(minX+maxX)/2,0,minZ-2.8+D/2]),rotation:[0,0,0],color:'#f1e6d6',initiallyVisible:true});}
  const world:PersistentWorld={worldId,template:'MECHANISM_STAGE',environmentId:input.environmentId??'ENV_FOREST_001',presenter:{entityId:'presenter',resourceId:'CHAR_CAIO_001',home:presenterHome,facing:1.05,scale:0.82},cutaway:layout.enclosure?{kind:'HOUSING_SECTION',openAmount:1,revealsEntityIds:[...layout.inside,...layout.tints]}:{kind:'NONE',openAmount:0,revealsEntityIds:[]},cameraZones,entities,visualScope,maxSimultaneousVisible};
@@ -290,6 +304,7 @@ export function planScriptWorld(input:PlannerInput):VisualCausalPlan{
  const seenGate=new Set<string>();for(const a of u.actions)if(a.action==='OPEN'||a.action==='CLOSE'){const g=lidOf(a.entityIds.map(id=>entities.find(e=>e.scriptEntityIds?.includes(id))).find(Boolean)??null);if(!g||seenGate.has(g.entityId))continue;seenGate.add(g.entityId);if(a.action==='CLOSE'&&!g.initialStateFrom){if(g.assembly==='LID'){g.position=sidePose(g,g);at[g.entityId]=[...g.position] as Vec3;}else g.rotation=gateAngle(g,1);state[g.entityId].openness=1;}}
  // One planned position per object: every MOVE (horizontal or vertical) starts where the previous one ended.
  const change=(beatId:string,entityId:string,operation:VisualStateTransition['operation'],parameter:string|null,to:number|boolean,grounded:string|null,reason:string|null)=>{
+  if(!state[entityId])throw Error('SCRIPT_WORLD transition on an entity that is not in the world: '+entityId);
   const key=parameter??'visible',from=state[entityId][key];if(from===to)return null;version[entityId]=(version[entityId]??0)+1;state[entityId][key]=to;
   const t:VisualStateTransition={id:id('VT',{beatId,entityId,key,to}),beatId,entityId,operation,parameter,from,to,grounding:grounded?'GROUNDED':'EDITORIAL',evidenceRelationId:grounded,editorialReason:reason,stateVersion:version[entityId]};transitions.push(t);return t.id;};
  const timing=(sid:string)=>input.timing.find(t=>t.sentenceId===sid)!;
@@ -331,9 +346,30 @@ export function planScriptWorld(input:PlannerInput):VisualCausalPlan{
   schedule([{sentenceId:lead[0].id,storyNodeIds:[],relationIds:[],evidenceIds:[],grounding:'EDITORIAL_CONTEXT',visualIntent:'WORLD_ESTABLISHING',presenterIntent:'ESTABLISH_CONTEXT',presenterVisible:true,cameraZone:'WORLD',cameraMotivation:'Establish the world before any explanation',focusEntityId:null,label:null,operations:[],proof:null,weight:0.55},
    {sentenceId:lead[lead.length-1].id,storyNodeIds:[],relationIds:[],evidenceIds:[],grounding:'PRESENTER_ACTION',visualIntent:'SYSTEM_ESTABLISHING',presenterIntent:'POINT_TO_SYSTEM',presenterVisible:true,cameraZone:'SYSTEM',cameraMotivation:'New focus: the system the script talks about',focusEntityId:mainW.entityId,label:null,operations:ops({operation:'HIGHLIGHT',target:mainW.entityId,parameters:{amount:0.2}}),proof:null,weight:0.45}],a,b,lead[0].id,false);}
  let presenterOn=true;const mergedInto=new Map<string,string>(),absorbed:string[]=[];
- const physIntents=new Set(['CONTAINER_ROTATES','CONTAINER_KEEPS_ROTATING','CONTENT_PRESSED_AGAINST_WALL','CONTENT_MOVES_WITH_CONTAINER','MATERIAL_PASSES_THROUGH_BOUNDARY','MATERIAL_COLLECTS','OUTER_AROUND_INNER','CONTENT_INSIDE_CONTAINER','ACTUATOR_PULLS_FROM_SOURCE','ACTUATOR_SENDS_ALONG_ROUTE','MATERIAL_LEAVES_SYSTEM','CONTENT_LOSES_MATERIAL']);
+ const physIntents=new Set(['CONTAINER_ROTATES','CONTAINER_KEEPS_ROTATING','CONTENT_PRESSED_AGAINST_WALL','CONTENT_MOVES_WITH_CONTAINER','MATERIAL_PASSES_THROUGH_BOUNDARY','MATERIAL_COLLECTS','OUTER_AROUND_INNER','CONTENT_INSIDE_CONTAINER','ACTUATOR_PULLS_FROM_SOURCE','ACTUATOR_SENDS_ALONG_ROUTE','MATERIAL_LEAVES_SYSTEM','CONTENT_LOSES_MATERIAL',
+  'PART_PLACED','COLLECTOR_SHADED','PART_MOVES_TO_PLACE','RADIANT_ENERGY_ARRIVES','CARRIERS_PUSHED','CARRIERS_FLOW_IN_CONDUCTOR','CURRENT_FORMED','ONE_DIRECTION_CURRENT','CONVERTER_RECEIVES','CONVERTER_CHANGES_KIND','CURRENT_TO_DISTRIBUTION','CURRENT_REACHES_CONSUMERS','CONSUMER_ON','CONSUMER_OFF','COLLECTOR_PRODUCES','SURPLUS_TO_GRID','METER_COUNTS','BUILDING_USES_GRID','BUILDING_USES']);
+ // ---- Hypothetical episodes: "Imagine… / E se…" up to a stated rewind cue ("Vamos voltar."). What the script says inside is
+ // shown (marked hypothetical); at the cue every state the episode changed goes back to how it was before it.
+ const foldS=(x:string)=>x.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9' ]+/g,' ').replace(/\s+/g,' ').trim();
+ const episodes:{start:number;rewind:number}[]=[];for(let i=0;i<input.sentences.length;i++)if(HYPOTHESIS_CUE.test(foldS(input.sentences[i].text))){const j=input.sentences.findIndex((x,k)=>k>i&&REWIND_CUE.test(foldS(x.text)));if(j>i){episodes.push({start:i,rewind:j});i=j;}}
+ const sIndex=(sid:string)=>input.sentences.findIndex(x=>x.id===sid),rewound=new Set<string>(),snapped=new Set<number>();
+ let snap:{state:typeof state;at:typeof at;activity:typeof activity;fill:typeof fill}|null=null;
+ const takeSnap=()=>{snap={state:JSON.parse(JSON.stringify(state)),at:JSON.parse(JSON.stringify(at)),activity:{...activity},fill:{...fill}};};
+ const rewindDraft=(sid:string):Draft|null=>{if(!snap)return null;const sn=snap;snap=null;const o:BeatOperation[]=[],ch:{id:string;op:VisualStateTransition['operation'];key:string|null;to:number|boolean}[]=[];
+  for(const e of entities){const cur=state[e.entityId],was=sn.state[e.entityId];if(!cur||!was)continue;
+   if(cur.visible!==was.visible){o.push({operation:was.visible?'REVEAL':'HIDE',target:e.entityId,parameters:{},startOffset:0.1,endOffset:0.2});ch.push({id:e.entityId,op:was.visible?'REVEAL':'HIDE',key:null,to:Boolean(was.visible)});}
+   for(const k of ['activity','fillLevel'] as const){const a=Number(cur[k]),b=Number(was[k]);if(Math.abs(a-b)>1e-6&&e.kind!=='PATH'){o.push({operation:b<a?'DECREASE':'INCREASE',target:e.entityId,parameters:{parameter:k,from:a,to:b},startOffset:0.15,endOffset:0.7});ch.push({id:e.entityId,op:b<a?'DECREASE':'INCREASE',key:k,to:b});}}
+   const p0=at[e.entityId],p1=sn.at[e.entityId];if(p0&&p1&&p0.some((v,i)=>Math.abs(v-p1[i])>1e-6)){o.push({operation:'MOVE',target:e.entityId,parameters:{from:[...p0],to:[...p1]},startOffset:0.15,endOffset:0.75});ch.push({id:e.entityId,op:'MOVE',key:Math.abs(p0[1]-p1[1])>1e-6?'y':'x',to:Math.abs(p0[1]-p1[1])>1e-6?p1[1]:p1[0]});}}
+  Object.assign(activity,sn.activity);Object.assign(fill,sn.fill);phys?.forget();energy?.forget();for(const k of Object.keys(sn.at))at[k]=sn.at[k];rewound.add(sid);
+  return{sentenceId:sid,storyNodeIds:[],relationIds:[],evidenceIds:[],grounding:'EDITORIAL_TRANSITION',visualIntent:'REWIND_TO_START',presenterIntent:'NONE',presenterVisible:false,cameraZone:'WORLD',cameraMotivation:'Rewind: back to before the hypothesis',focusEntityId:mainW.entityId,label:null,operations:o,proof:null,weight:0.8,
+   apply:b=>ch.map(c=>change(b,c.id,c.op,c.key,c.to,null,'Rewind: back to before the hypothesis'))};};
+ const flushRewinds=(beforeIndex:number)=>{for(const ep of episodes){const r=input.sentences[ep.rewind];if(ep.rewind>=beforeIndex||rewound.has(r.id)||r.kind==='FACT')continue;const d=rewindDraft(r.id);if(d){const t=timing(r.id);schedule([d],t.startFrame,t.endFrame,r.id,true);}}};
  for(const s of facts){
-  const t=timing(s.id),drafts:Draft[]=[];
+  const t=timing(s.id),drafts:Draft[]=[],si=sIndex(s.id);
+  flushRewinds(si);
+  // The world as it was before the hypothesis is remembered at its first factual sentence.
+  const ep0=episodes.find(ep=>ep.start<=si&&si<ep.rewind);if(ep0&&!snapped.has(ep0.start)){snapped.add(ep0.start);takeSnap();}
+  if(episodes.some(ep=>ep.rewind===si)){const d=rewindDraft(s.id);if(d)drafts.push(d);}
   // Relations in the order they are spoken ("when X, Y does Z": X is shown before Z); unplaced ones keep their order.
   // A part is introduced (joins the system) before anything it does.
   const spoken=(rid:string)=>u.actions.some(a=>a.claimId===rid&&a.action==='IDENTIFY')?-1:u.claims.find(c=>c.id===rid)?.trigger.start??(u.mechanism??[]).find(m=>m.id===rid)?.predicate.start??Infinity;
@@ -345,25 +381,29 @@ export function planScriptWorld(input:PlannerInput):VisualCausalPlan{
    if(shownBy){mergedInto.set(cid,shownBy.relationId);continue;}
    for(const a of acts)drafts.push(...draftsFor(a,cid,base));
    for(const c of mech.carriers.filter(c=>c.relationId===cid))drafts.push(carrierDraft(c,base));
-   const pc=phys?.draftFor(cid);if(pc)drafts.push(physicalDraft(pc,base));
-   else if(phys?.handled.includes(cid))absorbed.push(cid);
+   const pc=phys?.draftFor(cid)??energy?.draftFor(cid)??null;if(pc)drafts.push(physicalDraft(pc,base));
+   else if(phys?.handled.includes(cid)||energy?.handled.includes(cid))absorbed.push(cid);
   }
   // A clause-level draft that only re-animates a part the containment plan already demonstrates in this sentence is
   // absorbed by that demonstration (its claim is cited there): one demonstration per thing, not two.
-  if(phys&&drafts.some(d=>physIntents.has(d.visualIntent))){const physIds=new Set([...Object.values(phys.entityIds),...phys.carrierIds]),host=drafts.find(d=>physIntents.has(d.visualIntent))!;
+  if((phys||energy)&&drafts.some(d=>physIntents.has(d.visualIntent))){const physIds=new Set([...Object.values(phys?.entityIds??{}),...(phys?.carrierIds??[]),...Object.values(energy?.entityIds??{}),...(energy?.carrierIds??[])]),host=drafts.find(d=>physIntents.has(d.visualIntent))!;
    for(let i=drafts.length-1;i>=0;i--){const d=drafts[i];if(physIntents.has(d.visualIntent))continue;const touches=d.operations.some(o=>physIds.has(o.target))||Boolean(d.focusEntityId&&physIds.has(d.focusEntityId));
-    if(touches||d.operations.every(o=>o.operation==='HIGHLIGHT')){host.relationIds=[...new Set([...host.relationIds,...d.relationIds])].sort();drafts.splice(i,1);}}}
+    if(touches||d.operations.every(o=>o.operation==='HIGHLIGHT')){host.relationIds=[...new Set([...host.relationIds,...d.relationIds])].sort();drafts.splice(i,1);for(const r of d.relationIds)for(let g=gaps.length-1;g>=0;g--)if(gaps[g].relationId===r)gaps.splice(g,1);}}}
   for(const cid of absorbed.splice(0)){const host=drafts.find(d=>physIntents.has(d.visualIntent));if(host&&!host.relationIds.includes(cid))host.relationIds=[...host.relationIds,cid].sort();}
   for(const d of drafts)for(const [claim,rel] of mergedInto)if(d.relationIds.includes(rel)&&!d.relationIds.includes(claim)&&u.claims.find(c=>c.id===claim)?.segmentId===s.id)d.relationIds=[...d.relationIds,claim].sort();
   if(!drafts.length)drafts.push({sentenceId:s.id,storyNodeIds:[],relationIds:[],evidenceIds:[],grounding:'EDITORIAL_CONTEXT',visualIntent:'HOLD_SYSTEM',presenterIntent:'OBSERVE_SYSTEM',presenterVisible:true,cameraZone:'SYSTEM',cameraMotivation:'Hold the system',focusEntityId:mainW.entityId,label:null,operations:[],proof:null,weight:1});
   // A long sentence with one visual beat gets a second, closer look at the same participant (new framing, not new facts).
+  // Stated time of day (night): staging that follows the words, carried by the sentence's first draft.
+  const tod=energy?.timeOfDay(s.id);if(tod&&tod.ops.length){const d0=drafts[0]??null;const host:Draft=d0??{sentenceId:s.id,storyNodeIds:[],relationIds:[],evidenceIds:[],grounding:'EDITORIAL_TRANSITION',visualIntent:'TIME_OF_DAY',presenterIntent:'NONE',presenterVisible:false,cameraZone:'WORLD',cameraMotivation:'The stated time of day',focusEntityId:mainW.entityId,label:null,operations:[],proof:null,weight:0.6};
+   host.operations=[...tod.ops,...host.operations];const prev=host.apply;host.apply=b=>[...tod.changes.map(c=>change(b,c.entityId,c.operation as VisualStateTransition['operation'],c.parameter,c.to,null,c.reason??'Stated time of day')),...(prev?prev(b):[])];if(!d0)drafts.push(host);}
   const secs=(t.endFrame-t.startFrame)/input.fps;
   if(drafts.length===1&&secs>6&&drafts[0].focusEntityId){const d=drafts[0];drafts.push({sentenceId:s.id,storyNodeIds:[],relationIds:[],evidenceIds:[],grounding:'EDITORIAL_TRANSITION',visualIntent:'CLOSE_LOOK',presenterIntent:'NONE',presenterVisible:false,cameraZone:d.cameraZone==='COMPONENT'?'ACTION':'COMPONENT',cameraMotivation:'Closer look at the same participant while the sentence continues',focusEntityId:d.focusEntityId,label:null,operations:[],proof:null,weight:0.7});}
   const lastFact=s===facts[facts.length-1]&&secs>=3;
   if(lastFact)drafts.push({sentenceId:s.id,storyNodeIds:[],relationIds:[],evidenceIds:[],grounding:'EDITORIAL_CONTEXT',visualIntent:'RETURN_TO_WORLD',presenterIntent:'FINAL_PAYOFF',presenterVisible:true,cameraZone:'WORLD',cameraMotivation:'Return to context: the whole system in its world',focusEntityId:null,label:null,operations:[],proof:null,weight:0.75});
   schedule(drafts,t.startFrame,t.endFrame,s.id,true);
  }
- for(const s of input.sentences.slice(firstFact<0?input.sentences.length:firstFact).filter(s=>s.kind==='EDITORIAL')){const t=timing(s.id),plain:Draft={sentenceId:s.id,storyNodeIds:[],relationIds:[],evidenceIds:[],grounding:'EDITORIAL_CONTEXT',visualIntent:'RETURN_TO_WORLD',presenterIntent:'OBSERVE_SYSTEM',presenterVisible:true,cameraZone:'SYSTEM',cameraMotivation:'Return to the presenter and the system',focusEntityId:mainW.entityId,label:null,operations:[],proof:null,weight:1};
+ flushRewinds(Infinity);
+ for(const s of input.sentences.slice(firstFact<0?input.sentences.length:firstFact).filter(s=>s.kind==='EDITORIAL'&&!rewound.has(s.id))){const t=timing(s.id),plain:Draft={sentenceId:s.id,storyNodeIds:[],relationIds:[],evidenceIds:[],grounding:'EDITORIAL_CONTEXT',visualIntent:'RETURN_TO_WORLD',presenterIntent:'OBSERVE_SYSTEM',presenterVisible:true,cameraZone:'SYSTEM',cameraMotivation:'Return to the presenter and the system',focusEntityId:mainW.entityId,label:null,operations:[],proof:null,weight:1};
   const q=isQuestion(s),ant=editorialPaths.anticipation?.sentenceId===s.id?editorialPaths.anticipation:null,recap=editorialPaths.recap?.sentenceId===s.id?editorialPaths.recap:null;
   // QUESTION → small hold → reveal: the question holds on where the answer will happen (the answer itself comes with the next sentence).
   // With an anticipation, the quantity the question asks about becomes visible, then starts along the stated circuit.
@@ -503,6 +543,7 @@ export function planScriptWorld(input:PlannerInput):VisualCausalPlan{
  function physicalDraft(p:PhysicalCarrier,base:Pick<CausalVisualBeat,'sentenceId'|'storyNodeIds'|'relationIds'|'evidenceIds'>):Draft{
   const enc=layout.enclosure,opens=Boolean(enc&&activity[enc.entityId]<1&&p.focus!==enc.entityId);if(opens)activity[enc!.entityId]=1;
   const shift=(o:BeatOperation):BeatOperation=>opens&&!o.observed&&o.operation!=='HIGHLIGHT'?{...o,startOffset:+(0.22+o.startOffset*0.78).toFixed(3),endOffset:+(0.22+o.endOffset*0.78).toFixed(3)}:o;
+  for(const o of p.ops)if(o.operation==='MOVE'&&!o.observed&&Array.isArray(o.parameters.to))at[o.target]=[...(o.parameters.to as Vec3)] as Vec3;
   return{...base,grounding:'FACTUAL_DEMONSTRATION',visualIntent:p.intent,presenterIntent:'NONE',presenterVisible:false,cameraZone:p.zone,cameraMotivation:'Show '+p.rationale,focusEntityId:p.focus,label:null,
    operations:[...(opens?[{operation:'INCREASE' as const,target:enc!.entityId,parameters:{parameter:'activity',from:0,to:1},startOffset:0,endOffset:0.2}]:[]),...p.ops.map(shift)],proof:{level:p.level,rationale:p.rationale},weight:opens?1.3:1,
    apply:b=>[...(opens?[change(b,enc!.entityId,'INCREASE','activity',1,null,'Section opens to show the parts inside')]:[]),...p.changes.map(c=>change(b,c.entityId,c.operation as VisualStateTransition['operation'],c.parameter,c.to,c.reason?null:p.relationId,c.reason))]};}
@@ -518,6 +559,7 @@ export function planScriptWorld(input:PlannerInput):VisualCausalPlan{
    operations:[...(opens?[{operation:'INCREASE' as const,target:enc!.entityId,parameters:{parameter:'activity',from:0,to:1},startOffset:0,endOffset:0.2}]:[]),...(shown?[]:[{operation:'REVEAL' as const,target:e.entityId,parameters:{},startOffset:opens?0.22:0.05,endOffset:opens?0.26:0.1}]),opens?{...op,startOffset:0.3,endOffset:0.75}:op],proof:{level:c.supportLevel,rationale:c.observableChange},weight:opens?1.3:1,
    apply:b=>[...(opens?[change(b,enc!.entityId,'INCREASE','activity',1,null,'Section opens before the action inside')]:[]),...(shown?[]:[change(b,e.entityId,'REVEAL',null,true,null,'Carrier appears where the relation happens')]),change(b,e.entityId,c.operation==='FLOW'?'FLOW':c.operation,c.parameter,c.to,c.relationId,null)]};}
  beats.sort((a,b)=>a.startFrame-b.startFrame);beats.forEach((b,i)=>b.order=i);
+ for(const b of beats){const i=b.sentenceId?sIndex(b.sentenceId):-1;if(episodes.some(ep=>ep.start<=i&&i<ep.rewind))b.hypothetical=true;}
  // Beat-local lifecycle: revealed at the first beat of its window, hidden after the last one (editorial transitions).
  for(const w of entities.filter(e=>!e.initiallyVisible&&!carrierIds.has(e.entityId)&&!layout.tints.includes(e.entityId)&&!(e.entityId in layout.assemblyTargets))){const [a0,a1]=windowOf(w),inWin=beats.filter(b=>b.sentenceId&&segOrder.get(b.sentenceId)!>=a0&&segOrder.get(b.sentenceId)!<=a1);if(!inWin.length)continue;
   const first=inWin[0],lastB=inWin.at(-1)!;
@@ -565,6 +607,44 @@ export function planScriptWorld(input:PlannerInput):VisualCausalPlan{
   const route=ts.find(t=>t.kind==='PATH'&&!layout.inside.includes(t.entityId)&&b.operations.some(o=>o.target===t.entityId&&o.operation==='FLOW'&&!o.observed));
   const len=(p:Vec3[])=>p.slice(1).reduce((a,q,i)=>a+Math.hypot(q[0]-p[i][0],q[1]-p[i][1],q[2]-p[i][2]),0);
   if(route&&len(route.path!)>2.5){const p=route.path!,m=Math.floor(p.length/2);b.framing.track={from:[...p.slice(0,m+1),...near(p[0]),...edge].map(r3),to:[...p.slice(m),...near(p.at(-1)!),...edge].map(r3)};}}
+ // Energy-flow beats (no housing to frame against): each part is framed where it is at that beat (moves applied in order).
+ // Location before action: a part's first appearance opens on where it is, with the main object it belongs to, then pushes
+ // in to the action. Around the action, a thing of the action's size stays whole and a larger one (a wall, a roof) only
+ // where it meets the action, so a small part is never lost on a whole facade. A route from a far light source is framed
+ // where it arrives (the source stays in the sky).
+ if(energy){const where=new Map<string,Vec3>(),seenE=new Set<string>(),posE=(e:WorldEntity)=>where.get(e.entityId)??finalPos(e);
+  const boxE=(e:WorldEntity,c:Vec3=posE(e)):Vec3[]=>{const h=e.size.map(v=>v/2);return[[c[0]-h[0],c[1]-h[1],c[2]-h[2]],[c[0]+h[0],c[1]+h[1],c[2]+h[2]]];};
+  const anchor=Object.values(energy.entityIds).map(id=>entities.find(e=>e.entityId===id)).find(e=>e?.role==='MAIN_SYSTEM');
+  const skies=entities.filter(e=>e.assembly==='RADIANT_SOURCE'),gap=(p:Vec3,q:Vec3)=>Math.hypot(p[0]-q[0],p[1]-q[1],p[2]-q[2]);
+  const along=(p:Vec3[],f:number):Vec3=>{const ls=p.slice(1).map((q,i)=>gap(q,p[i])),T=ls.reduce((x,y)=>x+y,0);let d=f*T;for(let i=0;i<ls.length;i++){if(d<=ls[i]||i===ls.length-1){const k=ls[i]?Math.min(1,d/ls[i]):0;return p[i].map((v,j)=>v+(p[i+1][j]-v)*k) as Vec3;}d-=ls[i];}return p.at(-1)!;};
+  const routePts=(t:WorldEntity):Vec3[]=>{const p=t.path!;return skies.some(e=>gap(p[0],posE(e))<Math.max(...e.size))?[along(p,0.6),along(p,0.8),p.at(-1)!]:[p[0],p[Math.floor(p.length/2)],p.at(-1)!];};
+  for(const b of [...beats].sort((x,y)=>x.startFrame-y.startFrame)){
+   if(b.grounding==='FACTUAL_DEMONSTRATION'&&!b.framing&&physIntents.has(b.visualIntent)){
+    const ts=[...new Set(b.operations.filter(o=>!['HIGHLIGHT','HIDE','REVEAL'].includes(o.operation)).map(o=>o.target))].map(id=>entities.find(e=>e.entityId===id)).filter((e):e is WorldEntity=>Boolean(e&&e.assembly!=='RADIANT_SOURCE'));
+    const focus=entities.find(e=>e.entityId===b.focusEntityId&&e.kind!=='PATH'&&e.assembly!=='RADIANT_SOURCE');
+    const tight:Vec3[]=ts.flatMap(t=>t.kind==='PATH'?routePts(t):boxE(t));
+    for(const o of b.operations)if(o.operation==='MOVE'&&!o.observed&&Array.isArray(o.parameters.to)){const e=entities.find(x=>x.entityId===o.target);if(e)tight.push(...boxE(e,o.parameters.to as Vec3));}
+    if(focus&&!ts.includes(focus))tight.push(...boxE(focus));
+    if(tight.length){
+     const c0=tight.reduce((a,p)=>a.map((v,i)=>v+p[i]/tight.length) as Vec3,[0,0,0] as Vec3),R=Math.max(1.1,1.1*Math.max(...tight.flatMap(p=>p.map((v,i)=>Math.abs(v-c0[i])))));
+     const ctx:Vec3[]=[];for(const e of entities){if(e.kind==='PATH'||['RADIANT_SOURCE','NEIGHBORHOOD','INTERIOR_ROOM','STATE_TINT'].includes(e.assembly??'')||ts.includes(e)||e===focus)continue;
+      const [lo,hi]=boxE(e);if(![0,1,2].every(i=>lo[i]<=c0[i]+R&&hi[i]>=c0[i]-R))continue;
+      // (the main object the action sits on is cropped around it; a neighbour is kept whole when it is not much larger)
+      const on=e===anchor;
+      if(Math.max(...e.size)<=(on?2:3)*R)ctx.push(lo,hi);else ctx.push(lo.map((v,i)=>Math.max(v,c0[i]-R)) as Vec3,hi.map((v,i)=>Math.min(v,c0[i]+R)) as Vec3);}
+     const parts=[...ts,...(focus?[focus]:[])].filter(t=>t.kind!=='PATH'),fresh=parts.some(t=>!seenE.has(t.entityId));parts.forEach(t=>seenE.add(t.entityId));
+     // The action stays at the centre of its own shot: the context box is made even on both sides of it (across the screen).
+     const all=[...tight,...ctx],ex=[0,2].map(i=>Math.max(...all.map(p=>Math.abs(p[i]-c0[i])))),ys=all.map(p=>p[1]);
+     const local=[...all,[c0[0]-ex[0],Math.min(...ys),c0[2]-ex[1]] as Vec3,[c0[0]+ex[0],Math.max(...ys),c0[2]+ex[1]] as Vec3].map(r3),wide=fresh&&anchor&&!parts.includes(anchor)?[...local,...boxE(anchor).map(r3)]:null;
+     const keys=ts.flatMap(t=>t.kind==='PATH'?[routePts(t)[0],t.path!.at(-1)!]:[posE(t)]);
+     // Light from a source in the sky: the camera looks across the rays (side-on, from the side of the usual view, which sees
+     // the receiving face), so source, rays and arrival share one frame; portrait height holds the source above.
+     const sky=ts.find(t=>t.kind==='PATH'&&skies.some(e=>gap(t.path![0],posE(e))<Math.max(...e.size))),sp=sky?.path![0],ep=sky?.path!.at(-1);
+     const hz=sp&&ep?Math.hypot(sp[0]-ep[0],sp[2]-ep[2]):0,px=sp&&ep&&hz>0.5?(sp[2]-ep[2])/hz:0,pz=sp&&ep&&hz>0.5?(ep[0]-sp[0])/hz:0,sg=px*0.55+pz>=0?1:-1;
+     const dirE:Vec3=hz>0.5?[sg*px,0.2,sg*pz]:[0.55,0.32,1];
+     if(sp)keys.unshift(sp);const pts0=sp?[...(wide??local),...[[-0.7,-0.7,-0.7],[0.7,0.7,0.7]].map(d=>r3(sp.map((v,i)=>v+d[i]) as Vec3))]:wide??local;
+     b.framing={points:pts0,dir:dirE,keyCount:tight.length,need:OCCUPANCY_THRESHOLDS.DETAIL,keys:keys.map(r3),...(wide&&!sp?{reveal:local}:{})};}}
+   for(const o of b.operations)if(o.operation==='MOVE'&&!o.observed&&Array.isArray(o.parameters.to))where.set(o.target,[...(o.parameters.to as Vec3)] as Vec3);}}
  // Questions and the payoff: the editorial path is followed from where the quantity is to where it goes; a plain question
  // holds on the framing of the beat that answers it.
  for(const b of beats.filter(b=>b.visualIntent==='QUESTION_HOLD'||b.visualIntent==='PAYOFF_RECAP')){if(!enc0)break;
@@ -599,6 +679,7 @@ export function planScriptWorld(input:PlannerInput):VisualCausalPlan{
   ...(layout.enclosure?{spatialMap:spatialMap(layout.enclosure)}:{}),
   functionalForms:forms,
   // Semantic identity (roles from relations) and visual identity (what the drawing composes from those roles), kept apart.
+  ...(episodes.length?{episodes:episodes.map(ep=>({from:input.sentences[ep.start].id,rewindAt:input.sentences[ep.rewind].id}))}:{}),
   ...(phys?{physical:{system:phys.model.system,roles:phys.model.roles,reason:phys.model.reason,features:phys.features,
    pairs:phys.model.containment.filter(c=>phys.entityIds[c.container]&&phys.entityIds[c.content]).map(c=>({container:phys.entityIds[c.container],content:phys.entityIds[c.content],relationId:c.relationId,kind:c.kind})),
    rotating:phys.model.rotating.filter(r=>phys.entityIds[r.subject]).map(r=>{const content=entities.find(e=>e.assembly==='CONTENT_ITEMS');return{entityId:phys.entityIds[r.subject],relationId:r.relationId,content:content?.entityId??null,behaviorStated:phys.model.follows.some(f=>f.container===r.subject)||phys.model.contacts.some(c=>c.owner===r.subject)};})}}:{}),

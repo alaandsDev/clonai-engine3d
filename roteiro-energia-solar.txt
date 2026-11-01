@@ -1,0 +1,17 @@
+Como uma placa no telhado consegue acender a luz da sua casa?
+Imagine que você compra uma placa solar e coloca ela no quintal, embaixo de uma árvore.
+A sombra cobre a placa e a luz do sol não chega nas células.
+Sem luz, as células não produzem corrente e a lâmpada fica apagada.
+Vamos voltar.
+A placa vai para o telhado, virada para o sol.
+A luz do sol chega nas células de silício da placa.
+A luz empurra os elétrons dentro do silício.
+Os elétrons passam pelos fios e formam uma corrente elétrica.
+Só que essa corrente vai sempre no mesmo sentido, e a sua casa usa corrente que muda de sentido.
+O inversor recebe a corrente da placa e transforma em corrente alternada.
+A corrente alternada vai para o quadro de luz e chega nas tomadas.
+Agora a lâmpada acende.
+Ao meio-dia a placa produz mais energia do que a casa usa.
+A energia que sobra vai para a rede da rua e o medidor registra essa energia.
+À noite não chega luz nas células, e a casa usa a energia da rede.
+É por isso que a placa fica no telhado, no sol, e o inversor fica entre a placa e a casa.

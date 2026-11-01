@@ -89,7 +89,10 @@ export function cinematicCameras(plan:VisualCausalPlan,program:DemonstrationProg
      cameras.push({startFrame:a0,endFrame:a1,easing:steps===1?'EASE_IN_OUT':'LINEAR',purpose:b.shotType+(fol.full?': track the route from source to destination (around the subject)':': reveal — from the whole object to the part'),cameraId:'CAM_STATIC_001',behavior:'MOVE',startState:current,endState:to});current=to;}
     cursor+=n;}
    if(end-cursor<3)continue;}
-  const moving=!wideMotion.has(b.id)&&b.operations.some(o=>o.operation==='MOVE'&&!o.observed),focus=b.focusEntityId;
+  // A framing that already holds the whole move (start and destination) stays put: following it would carry the camera
+  // into what the subject moves onto.
+  const held=(id:string|null|undefined)=>{const e=id?w.entities.find(x=>x.entityId===id):undefined,P=b.framing?.points as Vec3[]|undefined;if(!e||!P||b.framing?.reveal)return false;const q=pose(e,end).position;return[0,1,2].every(j=>q[j]>=Math.min(...P.map(p=>p[j]))-0.3&&q[j]<=Math.max(...P.map(p=>p[j]))+0.3)&&[0,1,2].every(j=>pose(e,b.startFrame).position[j]>=Math.min(...P.map(p=>p[j]))-0.3&&pose(e,b.startFrame).position[j]<=Math.max(...P.map(p=>p[j]))+0.3);};
+  const moving=!wideMotion.has(b.id)&&b.operations.some(o=>o.operation==='MOVE'&&!o.observed)&&!held(b.focusEntityId),focus=b.focusEntityId;
   let to=current;
   if(moving&&focus){const e=w.entities.find(e=>e.entityId===focus)!,start=pose(e,cursor).position,finish=pose(e,end).position,delta=finish.map((v,j)=>v-start[j]) as Vec3;to={position:add(current.position,delta),target:add(current.target,delta)};}
   else if(!b.presenterVisible){const ratio=1-(Math.min(1,(end-cursor)/fps/5)*.045);to={position:current.position.map((v,j)=>current.target[j]+(v-current.target[j])*ratio) as Vec3,target:current.target};}

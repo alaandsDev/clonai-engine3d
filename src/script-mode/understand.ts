@@ -128,6 +128,8 @@ export function headsOf(text:string){
   const words=p.split(' ');let i=0;
   // Size/intensity adjectives before a noun are modifiers ("pequenos X", "alta Y"), never the head.
   while(i<words.length&&(L.DETERMINERS.has(words[i])||L.QUANTIFIER_HEADS.test(words[i])||/^(?:portanto|logo|assim|mais|menos|maior|menor)$/.test(words[i])||/^(?:pequen[oa]s?|grandes?|alt[oa]s?|fin[oa]s?|enormes?|minuscul[oa]s?|divers[oa]s?|vari[oa]s?)$/.test(words[i])&&i+1<words.length&&!/^(?:de|do|da|dos|das)$/.test(words[i+1])))i++;
+  // A leading time phrase ("ao meio-dia a X", "à noite o Y") is skipped up to the next noun phrase.
+  if(/^(?:ao|a|de|pela|pelo|durante)$/.test(words[i]??'')&&categoryOf(words[i+1]??'')==='TIME'){let k=i+2;while(k<words.length&&!L.DETERMINERS.has(words[k]))k++;i=k;while(i<words.length&&L.DETERMINERS.has(words[i]))i++;}
   const w=words[i];if(!w||/^\d/.test(w)||w.length<2)continue;
   // Deictic/interrogative adverbs and verbs are not noun heads ("como ela", "dali", "… e envia").
   if(/^(?:como|onde|dali|dai|ali|aqui|daqui|la|ai)$/.test(w)||/mente$/.test(w)||isMechVerb(w)&&!words.slice(0,i).some(x=>L.DETERMINERS.has(x)))continue;

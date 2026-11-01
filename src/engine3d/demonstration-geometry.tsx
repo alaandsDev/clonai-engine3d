@@ -8,12 +8,15 @@ import { AssemblyGeometry, ContactShadow, type AssemblyContext, type Environment
  * so legacy demonstrations render unchanged. The ground opening follows the terrain section footprint. */
 export function environmentStyleOf(program: DemonstrationProgram | undefined, state: DemonstrationState | undefined): EnvironmentStyle | undefined {
     if (!program || !state || !program.subjects.some(s => s.assembly)) return;
+    // A radiant source on stage sets the time of day: the sky darkens as it fades and stays dark once it is gone.
+    const src = program.subjects.find(s => s.assembly === 'RADIANT_SOURCE'), ss = src ? state.subjects[src.id] : undefined;
+    const night = ss ? (ss.visible ? 1 - Math.max(0, Math.min(1, ss.parameters.activity ?? 1)) : 1) : 0, nt = night > 0 ? { night } : {};
     const setting = program.subjects.some(s => s.assembly === 'CLOUD_FIELD') ? 'SKY' as const : program.subjects.some(s => s.assembly === 'WATER_SURFACE') ? 'WATER' as const : program.subjects.some(s => s.assembly === 'INTERIOR_ROOM') ? 'INDOOR' as const : undefined;
-    if (setting) return { stylized: true, setting };
+    if (setting) return { stylized: true, setting, ...nt };
     const terrain = program.subjects.find(s => s.assembly === 'TERRAIN_SECTION' && state.subjects[s.id]?.visible);
-    if (!terrain) return { stylized: true };
+    if (!terrain) return { stylized: true, ...nt };
     const p = state.subjects[terrain.id].position, [w, , d] = terrain.size;
-    return { stylized: true, hole: { x: [p[0] - w / 2, p[0] + w / 2], z: [p[2] - d / 2, p[2] + d / 2] }, cut: state.environment.groundCutaway };
+    return { stylized: true, hole: { x: [p[0] - w / 2, p[0] + w / 2], z: [p[2] - d / 2, p[2] + d / 2] }, cut: state.environment.groundCutaway, ...nt };
 }
 function Tube({ from, to, radius, color, opacity = 1 }: {
     from: Vec3;

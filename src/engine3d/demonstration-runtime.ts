@@ -88,7 +88,7 @@ export function validateDemonstrationProgram(p: DemonstrationProgram, shot: Shot
     let meshes = 0;
     for (const s of p.subjects) {
         shape(s, ['id', 'kind', 'resourceId', 'size', 'color', 'path', 'layer', 'assembly','parentId','variant'], ['resourceId', 'path', 'layer', 'assembly','parentId','variant']);
-        if(s.variant!==undefined)enums(s.variant,['STEM','CONTROL','PHASE','THERMAL','KITCHEN_LIKE','BATHROOM_LIKE','BUILDING_SHAFT','WORKSHOP','DOOR_FRONT','COMPRESSOR_LIKE','VALVE_LIKE','HEAT_EXCHANGER','CONTROL_UNIT','COMPRESSION','PRESSURE','PERFORATED','PUMP_LIKE','NEUTRAL_INTERIOR']);
+        if(s.variant!==undefined)enums(s.variant,['STEM','CONTROL','PHASE','THERMAL','KITCHEN_LIKE','BATHROOM_LIKE','BUILDING_SHAFT','WORKSHOP','DOOR_FRONT','COMPRESSOR_LIKE','VALVE_LIKE','HEAT_EXCHANGER','CONTROL_UNIT','COMPRESSION','PRESSURE','PERFORATED','PUMP_LIKE','NEUTRAL_INTERIOR','CONVERTER_LIKE','DISTRIBUTOR_LIKE','OUTLET_LIKE','METER_LIKE','TREE_LIKE','LIGHT','CHARGE','ALTERNATING']);
         if(s.parentId!==undefined)text(s.parentId,'parent id');
         if (s.assembly !== undefined) { enums(s.assembly, Object.keys(ASSEMBLY_KINDS)); if (ASSEMBLY_KINDS[s.assembly] !== s.kind) fail('DEMONSTRATION_SCHEMA', 'assembly ' + s.assembly + ' requires ' + ASSEMBLY_KINDS[s.assembly]); }
         text(s.id, 'subject');
@@ -275,7 +275,7 @@ export function validateDemonstrationProgram(p: DemonstrationProgram, shot: Shot
         demonstrationStateShape(e, p, shot);
         // Budget on what is visible at this frame (subjects and meshes), not on everything ever mentioned.
         // Environment-like assemblies (backdrops, medium fields, rooms) are the stage, not subjects.
-        const visible = p.subjects.filter(x => e.subjects[x.id].visible && !['STUDIO_BACKDROP', 'CLOUD_FIELD', 'WATER_SURFACE', 'ROAD_STRIP', 'INTERIOR_ROOM'].includes(x.assembly ?? ''));
+        const visible = p.subjects.filter(x => e.subjects[x.id].visible && !['STUDIO_BACKDROP', 'CLOUD_FIELD', 'WATER_SURFACE', 'ROAD_STRIP', 'INTERIOR_ROOM', 'NEIGHBORHOOD', 'RADIANT_SOURCE', 'SHADE_TREE'].includes(x.assembly ?? ''));
         if (visible.length > DEMONSTRATION_LIMITS.subjects)
             fail('DEMONSTRATION_BUDGET', 'simultaneous visible subjects');
         if (visible.reduce((n, x) => n + (subjectMeshes.get(x.id) ?? 0), 0) > DEMONSTRATION_LIMITS.primitiveMeshes)

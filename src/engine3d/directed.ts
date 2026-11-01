@@ -1,3 +1,4 @@
+import { validateOverlay, type OverlayTrack } from './overlay';
 import { PerspectiveCamera, Vector3 } from 'three';
 import { fail, type Vec3, type ShotSpec, type CaptionCue, type Instance } from './contracts';
 import { fields, finite, text, vec, list } from './schema';
@@ -109,6 +110,8 @@ export interface DirectedSequence {
         onScreenText?: string;
     }[];
     captions: CaptionCue[];
+    /** Explainer overlay (one-word captions, part labels, time transitions). Optional. */
+    overlay?: OverlayTrack;
 }
 export const ease = (t: number, e: Easing) => { const x = Math.max(0, Math.min(1, t)); return e === 'LINEAR' ? x : e === 'EASE_IN' ? x * x : e === 'EASE_OUT' ? 1 - (1 - x) ** 2 : x * x * (3 - 2 * x); };
 const mix = (a: number, b: number, t: number) => t === 0 ? a : t === 1 ? b : a + (b - a) * t;
@@ -174,7 +177,8 @@ function noOverlap<T extends Segment>(items: T[], key: (s: T) => string) { for (
             fail('DIRECTED_SCHEMA', 'overlapping tracks'); }
 export function validateDirected(input: DirectedSequence): DirectedSequence {
     const s = structuredClone(input);
-    fields(s, ['version', 'id', 'fps', 'width', 'height', 'totalFrames', 'baseShot', 'initialState', 'finalState', 'blocking', 'actionSegments', 'cameraSegments', 'focusSegments', 'propMotions', 'shots', 'captions','demonstration'], 'DirectedSequence');
+    fields(s, ['version', 'id', 'fps', 'width', 'height', 'totalFrames', 'baseShot', 'initialState', 'finalState', 'blocking', 'actionSegments', 'cameraSegments', 'focusSegments', 'propMotions', 'shots', 'captions','demonstration','overlay'], 'DirectedSequence');
+    if (s.overlay !== undefined) validateOverlay(s.overlay, s.totalFrames);
     if (s.version !== 1)
         fail('DIRECTED_SCHEMA', 'version');
     text(s.id, 'id');

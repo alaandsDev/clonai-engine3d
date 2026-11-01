@@ -24,7 +24,7 @@ export interface WorldEntity {
  /** Generic stylized assembly used to draw the entity (editorial geometry; never a fact). */
  assembly?:Assembly;
  /** Assembly attachment: position/rotation/scale are local to this parent. */
- parentId?:string;variant?:'STEM'|'CONTROL'|'PHASE'|'THERMAL'|'KITCHEN_LIKE'|'BATHROOM_LIKE'|'BUILDING_SHAFT'|'WORKSHOP'|'DOOR_FRONT'|import('./functional-form').FormVariant|'PERFORATED'|'PUMP_LIKE'|'NEUTRAL_INTERIOR';
+ parentId?:string;variant?:'STEM'|'CONTROL'|'PHASE'|'THERMAL'|'KITCHEN_LIKE'|'BATHROOM_LIKE'|'BUILDING_SHAFT'|'WORKSHOP'|'DOOR_FRONT'|import('./functional-form').FormVariant|'PERFORATED'|'PUMP_LIKE'|'NEUTRAL_INTERIOR'|'CONVERTER_LIKE'|'DISTRIBUTOR_LIKE'|'OUTLET_LIKE'|'METER_LIKE'|'TREE_LIKE'|'LIGHT'|'CHARGE'|'ALTERNATING';
  /** Phase29 readability: functional silhouette selected from the part's stated role in the mechanism (never from its name). */
  form?:import('./functional-form').FunctionalForm;
  /** Phase29: initial numeric parameters (e.g. a source container already holding liquid) and the script relation that sets the initial pose. */
@@ -65,6 +65,8 @@ export interface CausalVisualBeat {
  demonstrationId?:string;stage?:import('./demonstrations').MicroStage;
  /** Phase29 causal camera: what must be in frame together (source, route, destination, parent housing) and from where; and the
   * frame where the narration says this beat's predicate (semantic sync anchor). */
+ /** Phase29 explainer: shown inside a stated hypothetical episode (undone at the rewind cue). */
+ hypothetical?:true;
  framing?:{points:[number,number,number][];dir:[number,number,number];keyCount?:number;need?:number;keys?:[number,number,number][];
   /** Phase29 readability: first appearance opens on the object then pushes to this region (OBJECT → REGION → COMPONENT). */
   reveal?:[number,number,number][];
@@ -102,6 +104,8 @@ export interface VisualCausalPlan {
  /** Phase29 containment class: semantic roles (from relations) and the visual features composed from them. */
  physical?:{system:string|null;roles:Record<string,string[]>;reason:string;features:string[];pairs:{container:string;content:string;relationId:string;kind:string}[];rotating:{entityId:string;relationId:string;content:string|null;behaviorStated:boolean}[]};
  /** Phase29 demonstration QA: participants of each admitted mechanism relation and which ones are drawn. */
+ /** Phase29 explainer: hypothetical episodes (first sentence → sentence with the rewind cue). */
+ episodes?:{from:string;rewindAt:string}[];
  mechanismParticipants?:{relationId:string;participants:string[];drawn:string[]}[];
  /** Phase29 spatial mechanism map: every part in the main object's own frame (region, anchor, routes). Persistent for the whole video. */
  spatialMap?:{object:string;features:string[];parts:{entityId:string;label:string|null;region:'INSIDE'|'BEHIND'|'REAR_LOW'|'OUTSIDE';anchor:[number,number,number];connected:string[];routeIn:string[];routeOut:string[];initiallyVisible:boolean}[]};

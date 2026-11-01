@@ -41,7 +41,7 @@ export function physicalModel(u:ScriptUnderstanding,known:Set<string>):PhysicalM
    M.crossings.push({material:s,boundary,openings:side?null:o,to,relationId:m.id});role(s,'MATERIAL');if(o&&!side)role(o,'OPENING');}
   else if(m.type==='CONTACT'&&s&&d){M.contacts.push({content:s,surface:d,owner:own,ownerResolution:own?'STATED':'UNRESOLVED',relationId:m.id});role(s,'CONTENT');role(d,'SURFACE');}
   else if(m.type==='ACTION'&&m.lemma==='FOLLOW'&&s&&o){M.follows.push({content:s,container:o,relationId:m.id});role(s,'CONTENT');}
-  else if(m.type==='ACTION'&&/^(?:PULL|PUSH)$/.test(m.lemma)&&s&&o&&m.object?.category==='MATERIAL'){M.transfers.push({actor:s,material:o,source:src,path:p,destination:d,kind:m.lemma,relationId:m.id});role(o,'MATERIAL');if(src)role(src,'CONTAINER');}
+  else if(m.type==='ACTION'&&/^(?:PULL|PUSH)$/.test(m.lemma)&&s&&physical(m.subject)&&o&&m.object?.category==='MATERIAL'){M.transfers.push({actor:s,material:o,source:src,path:p,destination:d,kind:m.lemma,relationId:m.id});role(o,'MATERIAL');if(src)role(src,'CONTAINER');}
   else if(m.type==='TRANSFER'&&/^(?:SEND|REMOVE)$/.test(m.lemma)&&s&&q&&m.quantity?.category==='MATERIAL'&&physical(m.subject)){M.transfers.push({actor:s,material:q,source:src,path:p,destination:d,kind:m.lemma,relationId:m.id});if(p)role(p,'CONDUIT');}
   else if(m.type==='MOVE'&&/^(?:DRAIN|LEAVE|EXIT)$/.test(m.lemma)&&s&&m.subject?.category==='MATERIAL'&&!src&&(m.destination?.region==='OUTSIDE'||d==='fora')){M.drains.push({material:s,relationId:m.id});}
   else if(m.type==='MOVE'&&m.lemma==='LEAVE'&&s&&m.subject?.category==='MATERIAL'&&src&&physical(m.source)){M.losses.push({content:src,material:s,partial:false,relationId:m.id});role(src,'CONTENT');}
@@ -68,10 +68,12 @@ export interface PhysicalCarrier {relationId:string;sentenceId:string;focus:stri
  /** state each op leaves behind (for the planner's transitions). */
  changes:{entityId:string;operation:string;parameter:string|null;to:number|boolean;reason:string|null}[]}
 export interface ContainmentPlan {model:PhysicalModel;entityIds:Record<string,string>;carrierIds:string[];handled:string[];gaps:{relationId:string;sentenceId:string;reason:string}[];
- draftFor:(relationId:string)=>PhysicalCarrier|null;features:string[]}
+ draftFor:(relationId:string)=>PhysicalCarrier|null;features:string[];
+ /** Forget planned values (after a rewind the world planner's state is the truth again). */
+ forget:()=>void}
 const r3=(v:Vec3):Vec3=>v.map(x=>+x.toFixed(3)) as Vec3;
 /** Layout + carriers. `entities` is mutated: parts get their functional assembly and a place inside the system housing. */
-export function planContainment(u:ScriptUnderstanding,entities:WorldEntity[],L:MechanismLayout,worldId:string,known:Set<string>,clock:{fps:number;total:number;startOf:(sentenceId:string)=>number}):ContainmentPlan|null{
+export function planContainment(u:ScriptUnderstanding,entities:WorldEntity[],L:MechanismLayout,worldId:string,known:Set<string>,clock:{fps:number;total:number;startOf:(sentenceId:string)=>number;read?:(id:string,p:string)=>number|undefined}):ContainmentPlan|null{
  const M=physicalModel(u,known);if(!M.active)return null;
  const rels=(u.mechanism??[]).filter(m=>known.has(m.id));
  const cites=(h:string)=>rels.filter(m=>[m.subject,m.object,m.destination,m.source,m.quantity,m.path,m.propertyOwner].some(x=>H(x)===h)).map(m=>m.id).sort();
@@ -115,7 +117,8 @@ export function planContainment(u:ScriptUnderstanding,entities:WorldEntity[],L:M
  const carrier=(id:string,pts:Vec3[],rel:string):string=>{const e:WorldEntity={entityId:id,worldId,role:'SYSTEM_COMPONENT',grounding:'FACTUAL',abstraction:'ABSTRACT_SYSTEM_REPRESENTATION',relationIds:[rel],participant:null,label:null,scriptEntityIds:[],kind:'PATH',assembly:'TRANSFER_PATH',variant:'PHASE',size:[0.08,0.08,0.08],position:[0,0,0],path:pts.map(r3),rotation:[0,0,0],color:'#2f86e0',initiallyVisible:false,initial:{connection:1,flowProgress:0,amount:0.2}};entities.push(e);carrierIds.push(id);return id;};
  const handled:string[]=[];
  // Planner-time state (one value per entity/parameter, in story order).
- const st:Record<string,number>={};const get=(id:string,p:string,d=0)=>st[id+'|'+p]??d;const set=(id:string,p:string,v:number)=>{st[id+'|'+p]=v;};
+ // (unset values start from the part's own initial state, never from an assumed empty/off state)
+ const st:Record<string,number>={};const get=(id:string,p:string,d?:number)=>st[id+'|'+p]??clock.read?.(id,p)??d??entities.find(e=>e.entityId===id)?.initial?.[p]??0;const set=(id:string,p:string,v:number)=>{st[id+'|'+p]=v;};
  if(contentHead)set(ids[contentHead],'fillLevel',wet);
  const spinning=new Set<string>();
  const flowOps=(id:string,a=0.18,b=0.72):BeatOperation[]=>{const e=entities.find(x=>x.entityId===id)!;return[{operation:'REVEAL',target:id,parameters:{},startOffset:0.04,endOffset:0.1},{operation:'FLOW',target:id,parameters:{path:e.path,from:0,to:1,direction:'FORWARD',speed:1,amount:0.2},startOffset:a,endOffset:b},{operation:'HIDE',target:id,parameters:{},startOffset:0.96,endOffset:1}];};
@@ -163,5 +166,5 @@ export function planContainment(u:ScriptUnderstanding,entities:WorldEntity[],L:M
  for(const l of M.losses){handled.push(l.relationId);const cid=ids[l.content];if(!cid){gaps.push({relationId:l.relationId,sentenceId:sid(l.relationId),reason:'Content not drawn'});continue;}
   specs.set(l.relationId,()=>{cite(cid,l.relationId);const from=get(cid,'fillLevel',wet),to=+(l.partial?Math.max(0.25,from-0.5):Math.max(0,from-0.35)).toFixed(2);if(to>=from)return null;set(cid,'fillLevel',to);
    return{relationId:l.relationId,sentenceId:sid(l.relationId),focus:cid,zone:'COMPONENT',intent:'CONTENT_LOSES_MATERIAL',level:'PARTIAL',rationale:'The content holds less of the material (qualitative; '+(l.partial?'part of it, as stated':'as stated')+')',ops:[{operation:'DECREASE',target:cid,parameters:{parameter:'fillLevel',from,to},startOffset:0.15,endOffset:0.75}],changes:[{entityId:cid,operation:'DECREASE',parameter:'fillLevel',to,reason:null}]};});}
- return{model:M,entityIds:ids,carrierIds,handled:[...new Set(handled)],gaps,features:[...new Set(features)],draftFor:(rel)=>specs.get(rel)?.()??null};
+ return{model:M,entityIds:ids,carrierIds,handled:[...new Set(handled)],gaps,features:[...new Set(features)],draftFor:(rel)=>specs.get(rel)?.()??null,forget:()=>{for(const k of Object.keys(st))delete st[k];}};
 }

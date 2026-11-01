@@ -1,5 +1,5 @@
 import React from 'react';
-import { BackSide, DoubleSide } from 'three';
+import { BackSide, DoubleSide, Quaternion, Vector3 } from 'three';
 import type { Vec3 } from './contracts';
 import type { DemonstrationSubject, SubjectState } from './demonstration-contracts';
 /** Phase29 motion assemblies: generic vehicle bodies, vehicle parts, invisible-concept manifestations and
@@ -209,12 +209,18 @@ function MachineUnit({ sub, s, ctx }: { sub: DemonstrationSubject; s: SubjectSta
  * THERMAL = warm particles (heat); PHASE = material particles (pale gas when fillLevel-like amount ≥ .5, blue liquid otherwise).
  * Readability: the SOURCE glows while the transfer runs, a fading trail joins source and head (older = smaller, fainter),
  * a small cone at the head shows the direction (reinforcement only) and the DESTINATION is ringed once reached. */
+/** A soft straight beam behind the head of a light transfer (reads as a ray at any distance). */
+function Beam({ from, to, color }: { from: Vec3; to: Vec3; color: string }) {
+    const a = new Vector3(...from), b = new Vector3(...to), d = b.clone().sub(a), l = d.length(); if (l < 0.01) return null;
+    return <mesh position={a.add(b).multiplyScalar(0.5)} quaternion={new Quaternion().setFromUnitVectors(new Vector3(0, 1, 0), d.normalize())}><cylinderGeometry args={[0.1, 0.1, l, 8]} /><meshBasicMaterial color={color} transparent opacity={0.6} depthWrite={false} /></mesh>;
+}
 function TransferPath({ sub, s, ctx }: { sub: DemonstrationSubject; s: SubjectState; ctx: MotionContext }) {
     const path = sub.path!, prog = Math.min(1, Math.max(0, s.parameters.flowProgress ?? 0)); if (prog <= 0.001 || path.length < 2) return null;
     const lens = path.slice(1).map((p, i) => Math.hypot(p[0] - path[i][0], p[1] - path[i][1], p[2] - path[i][2])), total = lens.reduce((a, b) => a + b, 0);
     const at = (d: number): Vec3 => { let r = Math.max(0, d); for (let i = 0; i < lens.length; i++) { if (r <= lens[i]) { const t = lens[i] ? r / lens[i] : 0; return path[i].map((v, k) => v + (path[i + 1][k] - v) * t) as Vec3; } r -= lens[i]; } return path[path.length - 1]; };
-    const thermal = sub.variant === 'THERMAL', gas = (s.parameters.amount ?? 0) >= 0.5, color = thermal ? '#ff8a2a' : gas ? '#e8f3fb' : '#2f86e0';
-    const reach = prog * total, n = 9, spacing = Math.max(0.12, Math.min(0.3, reach / n)), phase = (ctx.frame / ctx.fps * 0.9) % spacing;
+    // LIGHT = radiant energy (bright, large), CHARGE = charge carriers (small, cyan), ALTERNATING = alternating current (wobbles across the path).
+    const v = sub.variant, thermal = v === 'THERMAL' || v === 'LIGHT', gas = (s.parameters.amount ?? 0) >= 0.5, color = v === 'LIGHT' ? '#ffe066' : v === 'CHARGE' ? '#4fd1ff' : v === 'ALTERNATING' ? '#ffb347' : thermal ? '#ff8a2a' : gas ? '#e8f3fb' : '#2f86e0';
+    const light = v === 'LIGHT', reach = prog * total, n = light ? 14 : 9, spacing = Math.max(0.12, Math.min(light ? 0.5 : 0.3, reach / n)), phase = (ctx.frame / ctx.fps * 0.9) % spacing;
     // Head direction (for the cone): tangent at the head.
     const h0 = at(reach - 0.05), h1 = at(reach), dir = [h1[0] - h0[0], h1[1] - h0[1], h1[2] - h0[2]], dl = Math.hypot(...dir) || 1;
     const yaw = Math.atan2(dir[0], dir[2]), pitch = Math.acos(Math.max(-1, Math.min(1, dir[1] / dl)));
@@ -222,8 +228,10 @@ function TransferPath({ sub, s, ctx }: { sub: DemonstrationSubject; s: SubjectSt
     return <>
         <mesh position={path[0]}><sphereGeometry args={[thermal ? 0.16 * pulse : 0.1, 14, 10]} /><meshBasicMaterial color={color} transparent opacity={0.35} depthWrite={false} /></mesh>
         {Array.from({ length: Math.min(n, Math.floor(reach / spacing)) }, (_, i) => { const d = reach - i * spacing - phase, age = i / n, p = at(d);
-            return <mesh key={i} position={p}><sphereGeometry args={[(thermal ? 0.075 : 0.06) * (1 - 0.45 * age), 10, 8]} /><meshBasicMaterial color={color} transparent opacity={0.95 - 0.6 * age} /></mesh>; })}
-        <mesh position={h1}><sphereGeometry args={[thermal ? 0.13 : 0.09, 12, 10]} /><meshBasicMaterial color={color} /></mesh>
+            const wob = v === 'ALTERNATING' ? 0.07 * Math.sin(ctx.frame * 0.55 + i * 1.3) : 0;
+            return <mesh key={i} position={[p[0], p[1] + wob, p[2]]}><sphereGeometry args={[(light ? 0.2 : v === 'CHARGE' || v === 'ALTERNATING' ? 0.09 : thermal ? 0.075 : 0.06) * (1 - 0.45 * age), 10, 8]} /><meshBasicMaterial color={color} transparent opacity={0.95 - 0.6 * age} /></mesh>; })}
+        <mesh position={h1}><sphereGeometry args={[light ? 0.22 : thermal ? 0.13 : 0.09, 12, 10]} /><meshBasicMaterial color={color} /></mesh>
+        {light && <Beam from={at(reach - Math.min(reach, 4))} to={h1} color={color} />}
         {thermal && !arrived && <group position={h1} rotation={[0, yaw, 0]}><mesh rotation={[pitch, 0, 0]} position={[0, 0, 0]}><coneGeometry args={[0.07, 0.2, 10]} /><meshBasicMaterial color="#ffd27a" /></mesh></group>}
         {arrived && <mesh position={path[path.length - 1]} rotation={[Math.PI / 2, 0, 0]}><torusGeometry args={[0.2, 0.025, 6, 20]} /><meshBasicMaterial color={color} transparent opacity={0.8} /></mesh>}
     </>;

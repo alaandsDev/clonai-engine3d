@@ -21,7 +21,9 @@ export function demonstrationQa(plan:VisualCausalPlan,seq:DirectedSequence){
  const housing=plan.layout?.enclosure?ent.get(plan.layout.enclosure):plan.world.entities.find(e=>e.role==='MAIN_SYSTEM');
  // MAIN_SYSTEM_RECOGNIZABILITY: identity features beyond a plain shell, each seen together with the system.
  const featureEnts:Record<string,WorldEntity[]>={};const addF=(k:string,e?:WorldEntity)=>{if(e)(featureEnts[k]??=[]).push(e);};
- for(const e of plan.world.entities){if(e.form&&FORM_FEATURES.has(e.form))addF(e.form,e);if(e.assembly==='OUTER_CONTAINER')addF('OUTER_CONTAINER',e);if(e.assembly==='ROTATING_CONTAINER')addF(e.variant==='PERFORATED'?'PERFORATED_ROTATING_CONTAINER':'ROTATING_CONTAINER',e);if(e.assembly==='CONTENT_ITEMS')addF('CONTENT',e);if(e.variant==='PUMP_LIKE')addF('PUMP_LIKE',e);if(e.form==='CONDUIT'||e.assembly==='PIPE'&&plan.physical)addF('CONDUIT',e);}
+ for(const e of plan.world.entities){if(e.form&&FORM_FEATURES.has(e.form))addF(e.form,e);if(e.assembly==='OUTER_CONTAINER')addF('OUTER_CONTAINER',e);if(e.assembly==='ROTATING_CONTAINER')addF(e.variant==='PERFORATED'?'PERFORATED_ROTATING_CONTAINER':'ROTATING_CONTAINER',e);if(e.assembly==='CONTENT_ITEMS')addF('CONTENT',e);if(e.variant==='PUMP_LIKE')addF('PUMP_LIKE',e);if(e.form==='CONDUIT'||e.assembly==='PIPE'&&plan.physical)addF('CONDUIT',e);
+  // energy-flow parts
+  if(['COLLECTOR_PANEL','RADIANT_SOURCE','CONSUMER_LAMP','UTILITY_POLE'].includes(e.assembly??''))addF(e.assembly!,e);if(['CONVERTER_LIKE','DISTRIBUTOR_LIKE','METER_LIKE','OUTLET_LIKE'].includes(e.variant??''))addF(e.variant!,e);}
  if(housing?.variant==='DOOR_FRONT')addF('DOOR',housing);
  const feats=Object.keys(featureEnts),sample=plan.beats.map(mid);
  const seenF=feats.filter(k=>sample.some(f=>featureEnts[k].some(e=>onScreen(e,f,0.03))&&(!housing||onScreen(housing,f,0.12))));

@@ -9,7 +9,7 @@ const OUTLINE = '#26303a';
 const seeded = (n: number) => { const x = Math.sin(n * 57.3 + 19.1) * 43758.5453; return x - Math.floor(x); };
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 const mixHex = (a: number[], b: number[], t: number) => '#' + a.map((x, i) => Math.round(x + (b[i] - x) * clamp01(t)).toString(16).padStart(2, '0')).join('');
-export const FUNCTIONAL_VARIANTS = new Set(['COMPRESSOR_LIKE', 'VALVE_LIKE', 'HEAT_EXCHANGER', 'CONTROL_UNIT', 'COMPRESSION', 'PRESSURE', 'PUMP_LIKE']);
+export const FUNCTIONAL_VARIANTS = new Set(['COMPRESSOR_LIKE', 'VALVE_LIKE', 'HEAT_EXCHANGER', 'CONTROL_UNIT', 'COMPRESSION', 'PRESSURE', 'PUMP_LIKE', 'CONVERTER_LIKE', 'DISTRIBUTOR_LIKE', 'OUTLET_LIKE', 'METER_LIKE', 'TREE_LIKE']);
 /** Powered part acting on the circulating material: compact sealed body on a base, connected by an inlet and an outlet;
  * running = the body pulses (a band travels along it) and the lamp is lit. */
 function PoweredBody({ sub, s, ctx }: { sub: DemonstrationSubject; s: SubjectState; ctx: FunctionalContext }) {
@@ -38,6 +38,55 @@ function PumpLike({ sub, s, ctx }: { sub: DemonstrationSubject; s: SubjectState;
         <mesh position={[-R - 0.08, 0, d * 0.12]} rotation={[0, 0, Math.PI / 2]}><cylinderGeometry args={[0.05, 0.05, 0.18, 10]} /><meshToonMaterial color="#9aa6ae" /></mesh>
         <mesh position={[R * 0.55, R + 0.06, d * 0.12]}><cylinderGeometry args={[0.05, 0.05, 0.16, 10]} /><meshToonMaterial color="#9aa6ae" /></mesh>
     </group>;
+}
+/** Converter: a wall box with the input sign on one side ("=" one-way) and the output sign on the other ("~" alternating);
+ * activity = working (lamp), fillLevel = output produced (the "~" lights up). Faces +Z (rotated onto a wall upstream). */
+function ConverterBox({ sub, s, ctx }: { sub: DemonstrationSubject; s: SubjectState; ctx: FunctionalContext }) {
+    const [w, h, d] = sub.size, a = clamp01(s.parameters.activity ?? 0), out = clamp01(s.parameters.fillLevel ?? 0), z = d / 2 + 0.01, wob = Math.sin(ctx.frame * 0.35);
+    return <>
+        <mesh><boxGeometry args={[w, h, d]} /><meshToonMaterial color={sub.color} /></mesh>
+        <mesh scale={[1.05, 1.04, 1.1]}><boxGeometry args={[w, h, d]} /><meshBasicMaterial color={OUTLINE} side={BackSide} /></mesh>
+        {[0.05, -0.05].map(y => <mesh key={y} position={[-w * 0.22, h * 0.12 + y, z]}><boxGeometry args={[w * 0.28, 0.035, 0.01]} /><meshBasicMaterial color="#2d3439" /></mesh>)}
+        <mesh position={[w * 0.22, h * 0.12, z]} rotation={[0, 0, wob * 0.25 * out]}><torusGeometry args={[w * 0.1, 0.02, 6, 16, Math.PI]} /><meshBasicMaterial color={out > 0.5 ? '#ff9f1c' : '#9aa3ab'} /></mesh>
+        <mesh position={[0, -h * 0.3, z]}><sphereGeometry args={[0.035, 10, 8]} /><meshBasicMaterial color={a > 0.5 ? '#3ee86a' : '#5a3030'} /></mesh>
+    </>;
+}
+/** Distribution box: a door with a row of switches; activity = energised (lamp). */
+function DistributionBox({ sub, s }: { sub: DemonstrationSubject; s: SubjectState }) {
+    const [w, h, d] = sub.size, a = clamp01(s.parameters.activity ?? 0), z = d / 2 + 0.01;
+    return <>
+        <mesh><boxGeometry args={[w, h, d]} /><meshToonMaterial color={sub.color} /></mesh>
+        <mesh scale={[1.05, 1.04, 1.1]}><boxGeometry args={[w, h, d]} /><meshBasicMaterial color={OUTLINE} side={BackSide} /></mesh>
+        {[-1, 0, 1].map(i => <mesh key={i} position={[i * w * 0.25, 0, z]}><boxGeometry args={[w * 0.14, h * 0.28, 0.03]} /><meshToonMaterial color="#2d3439" /></mesh>)}
+        <mesh position={[w * 0.3, h * 0.36, z]}><sphereGeometry args={[0.03, 10, 8]} /><meshBasicMaterial color={a > 0.5 ? '#3ee86a' : '#5a3030'} /></mesh>
+    </>;
+}
+/** Outlet: a plate with two sockets; activity = live (a small glow ring). */
+function OutletPlate({ sub, s }: { sub: DemonstrationSubject; s: SubjectState }) {
+    const [w, h, d] = sub.size, a = clamp01(s.parameters.activity ?? 0), z = d / 2 + 0.005;
+    return <>
+        <mesh><boxGeometry args={[w, h, d]} /><meshToonMaterial color={sub.color} /></mesh>
+        {[-1, 1].map(i => <mesh key={i} position={[i * w * 0.15, 0, z]}><cylinderGeometry args={[0.02, 0.02, 0.01, 8]} /><meshBasicMaterial color="#2d3439" /></mesh>)}
+        {a > 0.05 && <mesh position={[0, 0, z]}><torusGeometry args={[w * 0.42, 0.015, 6, 20]} /><meshBasicMaterial color="#ffb347" transparent opacity={0.8 * a} /></mesh>}
+    </>;
+}
+/** Meter: a box with a round dial; fillLevel = reading (needle turns), activity = counting (lamp). */
+function MeterBox({ sub, s }: { sub: DemonstrationSubject; s: SubjectState }) {
+    const [w, h, d] = sub.size, a = clamp01(s.parameters.activity ?? 0), v = clamp01(s.parameters.fillLevel ?? 0), z = d / 2 + 0.01;
+    return <>
+        <mesh><boxGeometry args={[w, h, d]} /><meshToonMaterial color={sub.color} /></mesh>
+        <mesh position={[0, h * 0.08, z]} rotation={[Math.PI / 2, 0, 0]}><cylinderGeometry args={[w * 0.32, w * 0.32, 0.02, 20]} /><meshToonMaterial color="#f7f9fa" /></mesh>
+        <mesh position={[0, h * 0.08, z + 0.015]} rotation={[0, 0, 1.2 - v * 2.4]}><boxGeometry args={[0.015, w * 0.26, 0.01]} /><meshBasicMaterial color="#c0392b" /></mesh>
+        <mesh position={[0, -h * 0.3, z]}><sphereGeometry args={[0.03, 10, 8]} /><meshBasicMaterial color={a > 0.5 ? '#3ee86a' : '#5a3030'} /></mesh>
+    </>;
+}
+/** Tree (a stated shade-giver): trunk and a rounded canopy. */
+function TreeShape({ sub }: { sub: DemonstrationSubject }) {
+    const [w, h] = sub.size;
+    return <>
+        <mesh position={[0, -h * 0.25, 0]}><cylinderGeometry args={[w * 0.08, w * 0.11, h * 0.5, 8]} /><meshToonMaterial color="#7a5638" /></mesh>
+        {[[0, 0.15, 0, 0.42], [-0.22, 0.05, 0.1, 0.32], [0.22, 0.08, -0.08, 0.3]].map(([x, y, z, r], i) => <mesh key={i} position={[x * w, y * h, z * w]}><sphereGeometry args={[r * w, 12, 10]} /><meshToonMaterial color={sub.color} /></mesh>)}
+    </>;
 }
 /** Controller: small unit with a dial facing out at 45° (seen from the front and the side) and an indicator lamp.
  * activity 1 = demanding (needle left, lamp lit) → 0 = switched (needle right, lamp off). */
@@ -106,6 +155,11 @@ export function FunctionalPart({ sub, s, ctx }: { sub: DemonstrationSubject; s: 
         case 'COMPRESSION': return <Compression sub={sub} s={s} ctx={ctx} />;
         case 'PRESSURE': return <PressureAcross sub={sub} s={s} ctx={ctx} />;
         case 'PUMP_LIKE': return <PumpLike sub={sub} s={s} ctx={ctx} />;
+        case 'CONVERTER_LIKE': return <ConverterBox sub={sub} s={s} ctx={ctx} />;
+        case 'DISTRIBUTOR_LIKE': return <DistributionBox sub={sub} s={s} />;
+        case 'OUTLET_LIKE': return <OutletPlate sub={sub} s={s} />;
+        case 'METER_LIKE': return <MeterBox sub={sub} s={s} />;
+        case 'TREE_LIKE': return <TreeShape sub={sub} />;
         default: return null;
     }
 }

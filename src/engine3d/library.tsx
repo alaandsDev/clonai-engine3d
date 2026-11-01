@@ -452,15 +452,15 @@ export function Environment({ id, state, style }: { id: string;state?:Environmen
   const name = requireExecutor(id, "environment");
   const [baseBg,baseGround]=envColors[name];
   const bg=state?'#'+new Color(baseBg).multiply(new Color(state.tint)).lerp(new Color('#192330'),state.backgroundEmphasis*.35).getHexString():baseBg,ground=state?'#'+new Color(baseGround).multiply(new Color(state.tint)).getHexString():baseGround;
-  const forest = ["FOREST", "DEAD_FOREST", "WINTER"].includes(name);
+  const forest = ["FOREST", "DEAD_FOREST", "WINTER"].includes(name), night = style?.night ?? 0;
   return (
     <>
-      <color attach="background" args={[style?.setting==='SKY'?'#bfe0f4':style?.setting==='INDOOR'?'#efe6da':style?'#e3efe9':bg]} />
-      <fog attach="fog" args={[style?.setting==='SKY'?'#cfe8f7':style?.setting==='INDOOR'?'#efe6da':style?'#e3efe9':bg, style?.setting==='SKY'?30:(style?18:12)-(state?.fogIntensity??0)*8, style?.setting==='SKY'?140:(style?60:28)-(state?.fogIntensity??0)*18]} />
-      <ambientLight intensity={style?0.55:1.3} />
+      <color attach="background" args={[style?.setting==='SKY'?'#bfe0f4':style?.setting==='INDOOR'?'#efe6da':style?(night?'#'+new Color('#e3efe9').lerp(new Color('#26335a'),night).getHexString():'#e3efe9'):bg]} />
+      <fog attach="fog" args={[style?.setting==='SKY'?'#cfe8f7':style?.setting==='INDOOR'?'#efe6da':style?(night?'#'+new Color('#e3efe9').lerp(new Color('#26335a'),night).getHexString():'#e3efe9'):bg, style?.setting==='SKY'?30:(style?18:12)-(state?.fogIntensity??0)*8, style?.setting==='SKY'?140:(style?60:28)-(state?.fogIntensity??0)*18]} />
+      <ambientLight intensity={style?0.55*(1-0.35*night):1.3} />
       <directionalLight
         position={[-4, 8, 5]}
-        intensity={2.2}
+        intensity={2.2*(1-0.6*night)}
         color={name === "WINTER" ? "#d6f2ff" : "#fff1da"}
       />
       <directionalLight position={[4, 3, -2]} intensity={1.2} color="#9abddd" />

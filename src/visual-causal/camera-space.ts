@@ -11,7 +11,7 @@ export const OCCUPANCY_THRESHOLDS={DETAIL:0.06,COMPONENT:0.1,REGION:0.16,OBJECT:
 export type NarrativeScale=keyof typeof OCCUPANCY_THRESHOLDS;
 export const scaleOf=(e:WorldEntity):NarrativeScale=>{const m=Math.max(...e.size);return e.kind==='PATH'?'REGION':m<0.3?'DETAIL':m<1.2?'COMPONENT':m<2.2?'OBJECT':'WORLD';};
 // Containment parts are drawn see-through (translucent outer vessel, open/perforated drum, loose content).
-const NON_BLOCKING=new Set(['ROTATING_CONTAINER','OUTER_CONTAINER','CONTENT_ITEMS','INTERIOR_ROOM','STATE_TINT','TRANSFER_PATH','STUDIO_BACKDROP','CLOUD_FIELD','WATER_SURFACE','ROAD_STRIP','STREAMLINES','PRESSURE_FIELD','FORCE_ARROW','STEAM_PLUME','FLAME','PIPE']);
+const NON_BLOCKING=new Set(['NEIGHBORHOOD','RADIANT_SOURCE','CONSUMER_LAMP','ROTATING_CONTAINER','OUTER_CONTAINER','CONTENT_ITEMS','INTERIOR_ROOM','STATE_TINT','TRANSFER_PATH','STUDIO_BACKDROP','CLOUD_FIELD','WATER_SURFACE','ROAD_STRIP','STREAMLINES','PRESSURE_FIELD','FORCE_ARROW','STEAM_PLUME','FLAME','PIPE']);
 export function cameraSpaceOf(world:PersistentWorld,finalPos:(e:WorldEntity)=>Vec3=e=>e.position):CameraSpace{
  const blockers:CameraBlocker[]=[{id:'floor',kind:'FLOOR',min:[-200,-5,-200],max:[200,-0.01,200]}];
  let safe:{min:Vec3;max:Vec3}={min:[-60,0.15,-60],max:[60,40,60]};

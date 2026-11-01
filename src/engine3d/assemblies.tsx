@@ -5,6 +5,7 @@ import type { DemonstrationSubject, SubjectState } from './demonstration-contrac
 import { MotionAssembly } from './motion-assemblies';
 import { FunctionalPart, FUNCTIONAL_VARIANTS } from './functional-parts';
 import { ContainmentAssembly, CONTAINMENT_ASSEMBLIES } from './containment-assemblies';
+import { EnergyAssembly, ENERGY_ASSEMBLIES } from './energy-assemblies';
 /** Phase27B stylized assemblies: generic objects composed from primitives (editorial geometry).
  * Deterministic: animation depends only on the frame number. No asset files. */
 export const PALETTE = { GRASS: '#7fb35c', GRASS_DARK: '#5d9142', SOIL_TOP: '#6d4a33', SOIL_MID: '#8c6a47', SOIL_DEEP: '#6c5c50', WATER: '#2b8de0', WATER_LIGHT: '#a6dcff', METAL: '#a3aeb6', METAL_DARK: '#56636d', STONE: '#b9bec2', STONE_DARK: '#7d868d', WALL: '#f2e7d0', ROOF: '#c94b3b', DOOR: '#6b4a36', WINDOW: '#a8dcf2', TRIM: '#ffffff', OUTLINE: '#26303a', PANEL: '#8fa3ae', FRAME: '#5f7380', CARRIAGE: '#e0a93f' } as const;
@@ -232,6 +233,7 @@ export function AssemblyGeometry({ sub, s, ctx }: { sub: DemonstrationSubject; s
     // Phase29: a functional silhouette (selected from the part's stated role) replaces the assembly's default shape.
     if (sub.variant && FUNCTIONAL_VARIANTS.has(sub.variant)) return <FunctionalPart sub={sub} s={s} ctx={ctx} />;
     if (sub.assembly && CONTAINMENT_ASSEMBLIES.has(sub.assembly)) return <ContainmentAssembly sub={sub} s={s} ctx={ctx} />;
+    if (sub.assembly && ENERGY_ASSEMBLIES.has(sub.assembly)) return <EnergyAssembly sub={sub} s={s} ctx={ctx} />;
     switch (sub.assembly) {
         case 'TERRAIN_SECTION': return <TerrainSection sub={sub} ctx={ctx} highlight={highlight} />;
         case 'LIQUID_VOLUME': return <LiquidVolume sub={sub} ctx={ctx} highlight={highlight} />;
@@ -260,7 +262,8 @@ export function ContactShadow({ at, radius, opacity = 0.22 }: { at: Vec3; radius
 /** Stylized backdrop used only when a program declares assemblies: ground plate with an opening around the
  * terrain section (no split slabs), gradient sky dome, distant hills and a hemisphere + key/rim light rig. */
 /** setting: the medium the scene happens in, chosen from the program's medium field (sky, water) or the default ground. */
-export interface EnvironmentStyle { stylized: true; hole?: { x: [number, number]; z: [number, number] }; cut?: number; setting?: 'GROUND' | 'SKY' | 'WATER' | 'INDOOR' }
+/** night: 0 = day, 1 = night (follows the brightness of a radiant source on stage; 0 when there is none). */
+export interface EnvironmentStyle { stylized: true; hole?: { x: [number, number]; z: [number, number] }; cut?: number; setting?: 'GROUND' | 'SKY' | 'WATER' | 'INDOOR'; night?: number }
 const SKY_VERTEX = 'varying vec3 vP; void main(){ vP = (modelMatrix * vec4(position,1.0)).xyz; gl_Position = projectionMatrix * viewMatrix * vec4(vP,1.0); }';
 const SKY_FRAGMENT = 'uniform vec3 top; uniform vec3 bottom; varying vec3 vP; void main(){ float h = clamp(normalize(vP).y * 1.6 + 0.08, 0.0, 1.0); gl_FragColor = vec4(mix(bottom, top, h), 1.0); }';
 export function StylizedBackdrop({ style, ground, sky }: { style: EnvironmentStyle; ground: string; sky: [string, string] }) {
@@ -276,9 +279,10 @@ export function StylizedBackdrop({ style, ground, sky }: { style: EnvironmentSty
     if (style.setting === 'INDOOR') return <><hemisphereLight args={['#fff6ea', '#a08a70', 1.0]} /></>;
     if (style.setting === 'SKY') return <><hemisphereLight args={['#eaf6ff', '#4f8fb0', 1.0]} />
         <mesh renderOrder={-1}><sphereGeometry args={[150, 24, 12]} /><shaderMaterial side={BackSide} depthWrite={false} fog={false} vertexShader={SKY_VERTEX} fragmentShader={SKY_FRAGMENT} uniforms={{ top: { value: new Color('#3f8fd6') }, bottom: { value: new Color('#cfe8f7') } }} /></mesh></>;
+    const n = style.night ?? 0;
     return <>
-        <hemisphereLight args={['#dff1ff', '#6f8a55', 0.9]} />
-        <mesh renderOrder={-1}><sphereGeometry args={[80, 24, 12]} /><shaderMaterial side={BackSide} depthWrite={false} fog={false} vertexShader={SKY_VERTEX} fragmentShader={SKY_FRAGMENT} uniforms={{ top: { value: new Color(sky[0]) }, bottom: { value: new Color(sky[1]) } }} /></mesh>
+        <hemisphereLight args={['#dff1ff', '#6f8a55', 0.9 * (1 - 0.55 * n)]} />
+        <mesh renderOrder={-1}><sphereGeometry args={[80, 24, 12]} /><shaderMaterial side={BackSide} depthWrite={false} fog={false} vertexShader={SKY_VERTEX} fragmentShader={SKY_FRAGMENT} uniforms={{ top: { value: new Color(sky[0]).lerp(new Color('#0b1638'), n) }, bottom: { value: new Color(sky[1]).lerp(new Color('#3b4a78'), n) } }} /></mesh>
         {pieces.map(([at, size], i) => (i === 0 && front >= 0.999) ? null : <mesh key={i} position={i === 0 ? [at[0], at[1] - front * front * 9, at[2]] : at}><boxGeometry args={size} /><meshToonMaterial color={ground} /></mesh>)}
         {[[-14, -26, 9, '#8fb98a'], [6, -30, 12, '#86b083'], [22, -24, 8, '#93bd8d'], [-30, -20, 10, '#9cc596']].map(([x, z, r, c], i) =>
             <mesh key={'h' + i} position={[x as number, -0.2, z as number]} scale={[1, 0.32, 0.7]}><sphereGeometry args={[r as number, 20, 10]} /><meshToonMaterial color={c as string} /></mesh>)}

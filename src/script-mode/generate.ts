@@ -43,7 +43,9 @@ export function installNetworkGuard(){
  const origFetch=globalThis.fetch;globalThis.fetch=((input:unknown,init?:unknown)=>{const h=hostOf([input]);if(!local(h)){counters.external++;counters.blocked.push('fetch:'+String(h));return Promise.reject(Error('SCRIPT_MODE_NETWORK_FORBIDDEN '+String(h)));}counters.loopback++;return origFetch(input as string,init as RequestInit);}) as typeof fetch;
  return{counters,restore:()=>{restore.forEach(r=>r());(dns as {lookup:unknown}).lookup=origLookup;globalThis.fetch=origFetch;}};
 }
-export interface GenerateOptions {scriptPath?:string;scriptText?:string;outDir:string;fps?:number;render?:boolean;environmentId?:string;label?:string}
+export interface GenerateOptions {scriptPath?:string;scriptText?:string;outDir:string;fps?:number;render?:boolean;environmentId?:string;label?:string;
+ /** Explainer look (one-word captions, part labels, time marks) and 1080×1920 output. */
+ style?:'CLASSIC'|'EXPLAINER';hd?:boolean}
 export async function generateFromScript(o:GenerateOptions){
  const fps=o.fps??30,t0=performance.now(),guard=installNetworkGuard();
  const save=(n:string,x:unknown)=>{const f=path.join(o.outDir,n);mkdirSync(path.dirname(f),{recursive:true});writeFileSync(f,typeof x==='string'?x:JSON.stringify(x,null,2));return f;};
@@ -59,7 +61,7 @@ export async function generateFromScript(o:GenerateOptions){
   const timing=sentenceTiming(tracks,8),input=plannerInputFromScript(u,timing,fps,o.environmentId),plan=planVisualCausal(input);
   const validation=validateVisualPlan(plan,input.relations.map(r=>r.id));
   if(!validation.valid)throw Error('SCRIPT_PLAN_INVALID '+validation.issues.join(','));
-  const seq=compileVisualPlan(plan,{sentences:timing.map(t=>({id:t.sentenceId,text:segments.find(s=>s.id===t.sentenceId)!.text,startFrame:t.startFrame,endFrame:t.endFrame}))}),t4=performance.now();
+  const seq=compileVisualPlan(plan,{sentences:timing.map(t=>({id:t.sentenceId,text:segments.find(s=>s.id===t.sentenceId)!.text,startFrame:t.startFrame,endFrame:t.endFrame})),...(o.hd?{width:1080,height:1920}:{}),style:o.style??'CLASSIC'}),t4=performance.now();
   const qa=visualQa(plan,seq),coverage=scriptCoverage(u,plan),provenance=scriptProvenance(u,plan,seq),metrics=scriptMetrics(u,plan,qa,coverage);
   save('script.txt',raw);save('script-normalized.txt',source.normalized);save('semantic-claims.json',u);save('planner-input.json',input);save('raw-tracks.json',rawTracks);save('tracks.json',tracks);save('visual-plan.json',plan);save('directed-sequence.json',seq);save('qa.json',qa);save('script-provenance.json',provenance);save('coverage.json',coverage);
   let mp4:Record<string,unknown>|null=null,render={nativeMs:0,wallMs:0},frames:string[]=[];

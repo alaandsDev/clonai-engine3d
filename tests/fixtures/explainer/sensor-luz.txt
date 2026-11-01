@@ -1,0 +1,7 @@
+Como uma calculadora funciona sem pilha?
+A luz da lâmpada chega nas células do sensor da calculadora.
+A luz empurra os elétrons dentro do sensor.
+Os elétrons passam pelos fios e formam uma corrente elétrica.
+O regulador recebe a corrente e transforma em corrente estável.
+A corrente vai para o visor e chega nos números.
+Agora o visor acende.

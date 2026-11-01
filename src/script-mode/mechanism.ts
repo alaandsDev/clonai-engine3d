@@ -5,18 +5,21 @@ import type {ScriptSpan,ScriptUnderstanding} from './contracts';
  * Precision over recall: a clause without a known mechanism verb emits nothing; a pronoun resolves only to a single
  * compatible antecedent nearby; sequences are never turned into causes; modality, negation and conditions are kept. */
 export type EntityCategory='PHYSICAL_ENTITY'|'COMPONENT'|'MATERIAL'|'REGION'|'PROPERTY'|'QUANTITY'|'EVENT'|'ABSTRACT_CONCEPT'|'DISCOURSE'|'TIME';
-export type MechType='TRANSFER'|'MOVE'|'STATE_CHANGE'|'PROPERTY_CHANGE'|'ACTION'|'CONTROL'|'CONTACT'|'CONTAIN';
+export type MechType='TRANSFER'|'MOVE'|'STATE_CHANGE'|'PROPERTY_CHANGE'|'ACTION'|'CONTROL'|'CONTACT'|'CONTAIN'|'CONVERT';
 export interface MechRef {text:string;start:number;end:number;head:string|null;category:EntityCategory|null;resolvedFrom?:string;region?:string}
 export interface MechRelation {id:string;sentenceId:string;type:MechType;lemma:string;span:ScriptSpan;subject:MechRef|null;predicate:ScriptSpan;
  object?:MechRef;quantity?:MechRef;source?:MechRef;destination?:MechRef;path?:MechRef;property?:string;propertyOwner?:MechRef;direction?:'UP'|'DOWN'|'REACH';
- before?:string;after?:string;resultState?:string;negated:boolean;modality:'ASSERTED'|'POSSIBLE'|'CONDITIONAL';condition?:ScriptSpan;qualifiers:string[]}
+ before?:string;after?:string;resultState?:string;
+ /** CONVERT: what the input becomes ("transforma em X", "formam uma X"). */
+ result?:MechRef;negated:boolean;modality:'ASSERTED'|'POSSIBLE'|'CONDITIONAL';condition?:ScriptSpan;qualifiers:string[]}
 /** Character-wise fold keeps offsets: one output char per input char. */
 const fold=(s:string)=>[...s].map(c=>c.normalize('NFD')[0].toLowerCase()).join('');
-const TIME=/^(?:tempo|hora|horas|momento|vez|vezes|dia|dias|segundo|segundos|minuto|minutos|instante)$/;
+const TIME=/^(?:tempo|hora|horas|momento|vez|vezes|dia|dias|segundo|segundos|minuto|minutos|instante|noite|noites|manha|tarde|madrugada|meio)$/;
 const REGION=/^(?:interior|exterior|dentro|fora|fundo|topo|traseira|tras|frente|lado|base|superficie|meio|centro)$/;
 const PROPERTY=/^(?:pressao|temperatura|velocidade|nivel|volume|peso|densidade|altura|intensidade)$/;
-const QUANTITY=/^(?:calor|energia|frio|eletricidade)$/;
-const MATERIAL=/^(?:agua|ar|gas|gases|vapor|liquido|liquidos|fluido|fluidos|oleo|fumaca|sangue|suor|oxigenio|combustivel|gelo|areia|lama|materia|material)$/;
+/** Quantities: heat/cold, energy, electricity, light (radiant energy). "corrente" is a quantity only when electric (see below). */
+const QUANTITY=/^(?:calor|energia|frio|eletricidade|luz|radiacao)$/;
+const MATERIAL=/^(?:agua|ar|gas|gases|vapor|liquido|liquidos|fluido|fluidos|oleo|fumaca|sangue|suor|oxigenio|combustivel|gelo|areia|lama|materia|material|eletron|eletrons|carga|cargas)$/;
 const DISCOURSE=/^(?:segredo|truque|coisa|coisas|jeito|maneira|forma|problema|resposta|pergunta|motivo|ideia|isso|isto|aquilo|tudo|nada|algo|resto|pouco|muito|parte)$/;
 const ADVERB=/^(?:rapido|rapida|devagar|depressa|lentamente|logo|bem|mal|muito|pouco|mais|menos|ainda|sempre|nunca|tambem|so|apenas|ja|agora|sozinho|sozinha|juntos)$/;
 const ABSTRACT=/^(?:fisica|ciencia|gravidade|natureza|interacao)$/;
@@ -40,6 +43,12 @@ const V:{re:RegExp;type:MechType;lemma:string;role?:string}[]=[
  {re:/^(?:deixa|deixam|abandona|abandonam)$/,type:'MOVE',lemma:'LEAVE_FROM'},
  {re:/^(?:drena|drenam|escoa|escoam|esvazia|esvaziam)$/,type:'MOVE',lemma:'DRAIN'},
  {re:/^(?:acompanha|acompanham)$/,type:'ACTION',lemma:'FOLLOW'},
+ // Energy/conversion constructions: forming, converting, producing, lighting up, placing, measuring, covering, using.
+ {re:/^(?:forma|formam)$/,type:'CONVERT',lemma:'FORM'},{re:/^(?:transforma|transformam|converte|convertem)$/,type:'CONVERT',lemma:'CONVERT'},
+ {re:/^(?:produz|produzem|gera|geram)$/,type:'TRANSFER',lemma:'PRODUCE'},
+ {re:/^(?:acende|acendem)$/,type:'STATE_CHANGE',lemma:'LIGHT_UP'},{re:/^(?:apaga|apagam)$/,type:'STATE_CHANGE',lemma:'GO_DARK'},
+ {re:/^(?:coloca|colocam|instala|instalam|poe|poem)$/,type:'MOVE',lemma:'PLACE'},
+ {re:/^(?:registra|registram|mede|medem)$/,type:'ACTION',lemma:'MEASURE'},{re:/^(?:cobre|cobrem)$/,type:'ACTION',lemma:'COVER'},{re:/^(?:usa|usam|consome|consomem)$/,type:'ACTION',lemma:'USE'},
  {re:/^(?:contem)$/,type:'CONTAIN',lemma:'CONTAIN'},{re:/^(?:envolve|envolvem|rodeia|rodeiam)$/,type:'CONTAIN',lemma:'SURROUND'},
  {re:/^(?:vira|viram|torna|tornam|fica|ficam|continua|continuam|permanece|permanecem)$/,type:'STATE_CHANGE',lemma:'BECOME'},
  {re:/^(?:ferve|fervem)$/,type:'STATE_CHANGE',lemma:'BOIL'},{re:/^(?:evapora|evaporam)$/,type:'STATE_CHANGE',lemma:'EVAPORATE'},{re:/^(?:condensa|condensam)$/,type:'STATE_CHANGE',lemma:'CONDENSE'},
@@ -63,31 +72,39 @@ const innerVerb=(w:string)=>/r$/.test(w)?V.find(v=>v.re.test(w.slice(0,-1)))??V.
 /** "pressionadas contra", "encostado em": a participle of contact before a surface. */
 const CONTACT_PART=/^(?:pressionad|empurrad|encostad|grudad|apertad|prensad|colad|jogad|achatad)(?:o|a|os|as)$/;
 /** Size/intensity words before a noun are modifiers, never the head ("pequenos X", "mais água"). */
-const PRE_ADJ=/^(?:pequen[oa]s?|grandes?|boa|boas|bom|bons|alt[oa]s?|baix[oa]s?|muit[oa]s?|pouc[oa]s?|mais|menos|divers[oa]s?|vari[oa]s?|fin[oa]s?|minuscul[oa]s?|enormes?)$/;
+const PRE_ADJ=/^(?:pequen[oa]s?|grandes?|boa|boas|bom|bons|mesm[oa]s?|alt[oa]s?|baix[oa]s?|muit[oa]s?|pouc[oa]s?|mais|menos|divers[oa]s?|vari[oa]s?|fin[oa]s?|minuscul[oa]s?|enormes?)$/;
 /** "parte/metade/maioria de X": the quantity is X, partially. */
 const PARTITIVE=/^(?:parte|metade|maioria|resto|porcao)$/;
 const PLURAL_DET=/^(?:os|as|uns|umas|esses|essas|estes|estas|seus|suas)$/;
-const STATE_OF:Record<string,string>={BOIL:'BOILING',EVAPORATE:'GAS',CONDENSE:'LIQUID',FREEZE:'SOLID',MELT:'LIQUID',COOL:'COLD',HEAT:'HOT',EXPAND:'EXPANDED'};
-const STATE_WORD=/^(?:gas|vapor|liquido|liquida|solido|solida|quente|quentes|frio|fria|frios|frias|gelado|gelada|ligado|ligada|desligado|desligada|aberto|aberta|fechado|fechada|cheio|cheia|vazio|vazia)$/;
-const STATE_NORM=(w:string)=>({gas:'GAS',vapor:'GAS',liquido:'LIQUID',liquida:'LIQUID',solido:'SOLID',solida:'SOLID',quente:'HOT',quentes:'HOT',frio:'COLD',fria:'COLD',frios:'COLD',frias:'COLD',gelado:'COLD',gelada:'COLD',ligado:'ON',ligada:'ON',desligado:'OFF',desligada:'OFF',aberto:'OPEN',aberta:'OPEN',fechado:'CLOSED',fechada:'CLOSED',cheio:'FULL',cheia:'FULL',vazio:'EMPTY',vazia:'EMPTY'} as Record<string,string>)[w]??w.toUpperCase();
+const STATE_OF:Record<string,string>={LIGHT_UP:'ON',GO_DARK:'OFF',BOIL:'BOILING',EVAPORATE:'GAS',CONDENSE:'LIQUID',FREEZE:'SOLID',MELT:'LIQUID',COOL:'COLD',HEAT:'HOT',EXPAND:'EXPANDED'};
+const STATE_WORD=/^(?:gas|vapor|liquido|liquida|solido|solida|quente|quentes|frio|fria|frios|frias|gelado|gelada|ligado|ligada|desligado|desligada|aceso|acesa|apagado|apagada|aberto|aberta|fechado|fechada|cheio|cheia|vazio|vazia)$/;
+const STATE_NORM=(w:string)=>({gas:'GAS',vapor:'GAS',liquido:'LIQUID',liquida:'LIQUID',solido:'SOLID',solida:'SOLID',quente:'HOT',quentes:'HOT',frio:'COLD',fria:'COLD',frios:'COLD',frias:'COLD',gelado:'COLD',gelada:'COLD',ligado:'ON',ligada:'ON',desligado:'OFF',desligada:'OFF',aceso:'ON',acesa:'ON',apagado:'OFF',apagada:'OFF',aberto:'OPEN',aberta:'OPEN',fechado:'CLOSED',fechada:'CLOSED',cheio:'FULL',cheia:'FULL',vazio:'EMPTY',vazia:'EMPTY'} as Record<string,string>)[w]??w.toUpperCase();
 const DET=/^(?:o|a|os|as|um|uma|uns|umas|esse|essa|esses|essas|este|esta|seu|sua|meu|minha)$/;
 const PRON=/^(?:ele|ela|eles|elas)$/;
-const SKIP=/^(?:mas|entao|depois|assim|e|tambem|ainda|so|apenas|por|isso|quando|se|caso|enquanto)$/;
+const SKIP=/^(?:mas|entao|depois|assim|e|tambem|ainda|so|apenas|por|isso|quando|se|caso|enquanto|agora|imagine|imagina|suponha|supondo|digamos)$/;
 interface Tok {w:string;a:number;b:number}
 const toks=(f:string,off:number):Tok[]=>[...f.matchAll(/[a-z0-9]+|[,:;.?!]/g)].map(m=>({w:m[0],a:off+m.index!,b:off+m.index!+m[0].length}));
 const FEM=(det:string)=>/^(?:a|as|uma|umas|essa|essas|esta|sua|minha)$/.test(det);
 /** Noun phrase starting at i: determiner? + noun (+ one modifier when not a verb/preposition), with "de/do/da X" owner kept separately. */
 function np(t:Tok[],i:number,raw:string,base:number):{ref:MechRef;end:number;fem:boolean|null;pl:boolean|null;demonstrative:boolean;owner?:MechRef;ownerFem?:boolean|null}|null{
  let j=i,det='';if(t[j]&&DET.test(t[j].w)){det=t[j].w;j++;}
+ // article + possessive ("a sua casa", "o seu X"): one determiner phrase.
+ if(det&&/^(?:seu|sua|seus|suas|meu|minha|nosso|nossa)$/.test(t[j]?.w??'')&&t[j+1])j++;
  while(t[j]&&t[j+1]&&PRE_ADJ.test(t[j].w)&&/^[a-z]/.test(t[j+1].w)&&!ADVERB.test(t[j+1].w)&&!verbOf(t[j+1].w)&&!/^(?:de|do|da|dos|das|para|por|em|que|e|a|o)$/.test(t[j+1].w))j++;
- const n=t[j];if(!n||/[,:;.?!]/.test(n.w)||n.w==='nao'||ADVERB.test(n.w)&&!det||Boolean(verbOf(n.w))||/^(?:de|do|da|dos|das|para|por|pelo|pela|em|no|na|com|sem|que|e|ao|ate)$/.test(n.w))return null;
+ const n=t[j];if(!det&&/^(?:alguns|algumas|muitos|muitas|todos|todas|outros|outras|varios|varias|cada|poucos|poucas)$/.test(n?.w??''))return null; // a quantifier pronoun is not a participant
+ if(!n||/[,:;.?!]/.test(n.w)||n.w==='nao'||ADVERB.test(n.w)&&!det||Boolean(verbOf(n.w))||/^(?:de|do|da|dos|das|para|por|pelo|pela|em|no|na|com|sem|que|e|ao|ate)$/.test(n.w))return null;
  let end=j+1;if(t[end]&&!/[,:;.?!]/.test(t[end].w)&&!V.some(v=>v.re.test(t[end].w))&&!/^(?:de|do|da|dos|das|para|por|pelo|pela|em|no|na|com|que|e|ao|ate|o|a|os|as)$/.test(t[end].w)&&!STATE_WORD.test(t[end].w))end++;
  const s=t[i].a,e=t[end-1].b,ref:MechRef={text:raw.slice(s-base,e-base),start:s,end:e,head:n.w,category:categoryOf(n.w)};
+ // "corrente" (chain or electric current): a quantity when qualified as electric or said in an electric sentence.
+ if(/^correntes?$/.test(n.w)&&(/^(?:eletrica|alternada|continua)$/.test(t[j+1]?.w??'')||ELECTRIC_SCRIPT.value))ref.category='QUANTITY';
  let owner:MechRef|undefined,ownerFem:boolean|null=null;if(t[end]&&/^(?:de|do|da|dos|das)$/.test(t[end].w)&&!REGION.test(t[end+1]?.w??'')){const o=np(t,end+1,raw,base);if(o){owner=o.ref;ownerFem=/^(?:da|das)$/.test(t[end].w)?true:/^(?:do|dos)$/.test(t[end].w)?false:o.fem;end=o.end;}}
  return{ref,end,fem:det?FEM(det):null,pl:det?PLURAL_DET.test(det):/[^u]s$/.test(n.w)?true:null,demonstrative:/^(?:esse|essa|esses|essas|este|esta)$/.test(det),owner,ownerFem};
 }
+/** Whether the script speaks of electricity at all (decides "corrente" = current vs chain once per script). */
+const ELECTRIC_SCRIPT={value:false};
 export function mechanismRelations(u:ScriptUnderstanding):MechRelation[]{
  const out:MechRelation[]=[],script=u.source.normalized;
+ ELECTRIC_SCRIPT.value=/\b(?:eletron|eletrons|eletrica|eletrico|eletricidade|corrente eletrica|corrente alternada|corrente continua)\b/.test(fold(script));
  type Ante={ref:MechRef;fem:boolean|null;pl?:boolean|null};
  let prevSubjects:Ante[]=[];
  for(const seg of u.segments){if(seg.role==='QUESTION')continue;
@@ -113,6 +130,8 @@ export function mechanismRelations(u:ScriptUnderstanding):MechRelation[]{
    // "Ao + infinitive X," → temporal subordinate whose subject is the next main clause's subject.
    if(t[k].w==='ao'&&t[k+1]&&/r$/.test(t[k+1].w)){const inf=t[k+1].w.slice(0,-1),vb=V.find(v=>v.re.test(inf)||v.re.test(inf.replace(/a$/,'e')));const comma=t.findIndex((x,i)=>i>k&&x.w===',');
     if(vb&&comma>k){const st=t.slice(k+2,comma).map(x=>x.w).find(w=>STATE_WORD.test(w));pendingSub={verb:vb,vi:k+1,...(st?{state:STATE_NORM(st)}:{})};k=comma+1;continue;}}
+   // Time prefix without a comma: "À noite …", "Ao meio-dia …", "De manhã …" (crase or "ao"/"de" + a time word).
+   if((t[k].w==='a'&&/[àÀ]/.test(script[t[k].a]??'')||/^(?:ao|de|pela)$/.test(t[k].w))&&t[k+1]&&TIME.test(t[k+1].w)&&k===0){let q=k+2;if(t[k+1].w==='meio'&&t[q]?.w==='dia')q++;during='DURING:'+t.slice(k+1,q).map(x=>x.w).join(' ');k=q+(t[q]?.w===','?1:0);continue;}
    // Time prefix "Durante X," → qualifier (never the subject).
    if(t[k].w==='durante'){const n=np(t,k+1,raw,base);if(n&&t[n.end]?.w===','){during='DURING:'+n.ref.head;k=n.end+1;continue;}}
    // Location prefix "Dentro da X," / "Na X," → region qualifier for the clause.
@@ -130,10 +149,11 @@ export function mechanismRelations(u:ScriptUnderstanding):MechRelation[]{
    if(vi<0)break;
    const vw=t[vi].w,verb=aspect?.verb??passive??(estaAt===vi?V.find(v=>v.lemma==='BECOME'):undefined)??verbOf(vw)??V.find(v=>v.re.test(vw.slice(0,-1))||v.re.test(vw.slice(0,-2)+'e')||v.re.test(vw.slice(0,-1)+'m'))!;
    // subject = NP between k and verb (skipping connectors); "que" → antecedent; pronoun → local antecedent
-   let s=k;if(condEnd>=0&&vi>condEnd&&s<=condEnd)s=condEnd+1;while(s<vi&&(SKIP.test(t[s].w)||t[s].w===','||t[s].w===':'||t[s].w==='nao'||t[s].w==='que'&&t[s-1]?.w==='so'))s++;
+   let s=k;if(condEnd>=0&&vi>condEnd&&s<=condEnd)s=condEnd+1;while(s<vi&&(SKIP.test(t[s].w)||t[s].w===','||t[s].w===':'||t[s].w==='nao'||t[s].w==='que'&&/^(?:so|imagine|imagina|suponha|supondo|digamos)$/.test(t[s-1]?.w??'')))s++;
    let negated=false,modality:MechRelation['modality']=condition&&vi<condEnd&&!whileClause?'CONDITIONAL':'ASSERTED';
    const pre=t.slice(Math.max(k,condEnd>=0&&vi>condEnd?condEnd+1:k),vi).map(x=>x.w);
-   if(pre.includes('nao'))negated=true;if(pre.some(w=>/^(?:pode|podem|consegue|conseguem|deve|devem|poderia)$/.test(w)))modality='POSSIBLE';
+   // "não", and a negative subject ("ninguém liga", "nada passa", "nenhum X entra") negate the clause.
+   if(pre.includes('nao')||pre.some(w=>/^(?:ninguem|nenhum|nenhuma|nada|nunca|jamais)$/.test(w)))negated=true;if(pre.some(w=>/^(?:pode|podem|consegue|conseguem|deve|devem|poderia)$/.test(w)))modality='POSSIBLE';
    let subject:MechRef|null=null,subjFem:boolean|null=null,subjPl:boolean|null=null;
    const firstW=t[s]?.w;
    if(firstW==='que'&&lastObject){subject={...lastObject.ref,resolvedFrom:'RELATIVE'};subjFem=lastObject.fem;}
@@ -145,7 +165,7 @@ export function mechanismRelations(u:ScriptUnderstanding):MechRelation[]{
    // "Ao + infinitive" is a temporal subordinate: its subject is the main clause's subject (next clause).
    // complements after the verb up to the next clause boundary
    const verbAhead=(i:number)=>{for(let q=i;q<Math.min(t.length,i+5);q++){if(/^[,.;?!]$/.test(t[q].w))return false;if(V.some(v=>v.re.test(t[q].w))&&!/^(?:a|o|as|os|um|uma)$/.test(t[q-1]?.w??''))return true;}return false;};
-   let j=vi+1,end=j;while(end<t.length&&!/^[.;?!]$/.test(t[end].w)&&end!==condEnd&&t[end].w!=='enquanto'&&!(t[end].w==='que'&&end>j)&&!(t[end].w==='e'&&!isAuxE(end+1)&&verbAhead(end+1))&&!(t[end].w==='e'&&(isAuxE(end+1)||t[end+1]?.w==='se'&&Boolean(verbOf(t[end+2]?.w??''))))&&!(t[end].w===','&&t[end+1]&&(t[end+1].w==='que'||t[end+1].w==='e'||verbAhead(end+1)))&&!(t[end].w==='e'&&t[end+1]&&(V.some(v=>v.re.test(t[end+1].w))||PRON.test(t[end+1].w)||t[end+1].w===',')))end++;
+   let j=vi+1,end=j;while(end<t.length&&!/^[.;?!]$/.test(t[end].w)&&end!==condEnd&&t[end].w!=='enquanto'&&!(t[end].w===','&&/(?:ad|id)(?:o|a|os|as)$/.test(t[end+1]?.w??''))&&!(t[end].w==='que'&&end>j)&&!(t[end].w==='e'&&!isAuxE(end+1)&&verbAhead(end+1))&&!(t[end].w==='e'&&(isAuxE(end+1)||t[end+1]?.w==='se'&&Boolean(verbOf(t[end+2]?.w??''))))&&!(t[end].w===','&&t[end+1]&&(t[end+1].w==='que'||t[end+1].w==='e'||verbAhead(end+1)))&&!(t[end].w==='e'&&t[end+1]&&(V.some(v=>v.re.test(t[end+1].w))||PRON.test(t[end+1].w)||t[end+1].w===',')))end++;
    const comp=t.slice(j,end);
    const rel:MechRelation={id:'',sentenceId:seg.id,type:verb.type,lemma:verb.lemma,span:{start:t[s<vi?s:vi].a,end:t[Math.max(vi,end-1)].b,text:''},subject,predicate:{start:t[vi].a,end:t[vi].b,text:raw.slice(t[vi].a-base,t[vi].b-base)},negated,modality,qualifiers:[],...(condition&&modality==='ASSERTED'?{condition}:{})};
    if(region)rel.qualifiers.push(region);if(during)rel.qualifiers.push(during);if(aspect)rel.qualifiers.push('ASPECT:'+aspect.kind);if(passive)rel.qualifiers.push('PASSIVE');if(whileClause&&vi<condEnd)rel.qualifiers.push('WHILE');if(t[k-1]?.w==='enquanto'||t[s-1]?.w==='enquanto')rel.qualifiers.push('WHILE');
@@ -162,6 +182,10 @@ export function mechanismRelations(u:ScriptUnderstanding):MechRelation[]{
     if(c===c0&&/^atravess/.test(vw)&&DET.test(w)){const n=take(c);if(n){rel.object=n.ref;if(n.owner)rel.propertyOwner=n.owner;c=n.end;continue;}}
     // "sem + verb" ("sem parar") is manner, never a participant.
     if(w==='sem'&&comp[c+1]){rel.qualifiers.push('MANNER:sem '+comp[c+1].w);c+=2;continue;}
+    // "no mesmo sentido", "num só sentido": manner of a movement, never a place.
+    if(/^(?:no|na|num|numa|em)$/.test(w)&&/^(?:sentido|direcao)$/.test(comp[c+1]?.w??'')||/^(?:no|na|num|numa|em)$/.test(w)&&/^(?:mesmo|mesma|um|uma|so|outro|outra)$/.test(comp[c+1]?.w??'')&&/^(?:sentido|direcao)$/.test(comp[c+2]?.w??'')){rel.qualifiers.push('DIRECTION');c+=/^(?:sentido|direcao)$/.test(comp[c+1].w)?2:3;continue;}
+    // "transforma (X) em Y": what the input becomes.
+    if(w==='em'&&rel.type==='CONVERT'){const n=take(c+1);if(n){rel.result=n.ref;c=n.end;continue;}}
     if(w==='contra'){const n=take(c+1);if(n){rel.destination=n.ref;if(n.owner)rel.propertyOwner=n.owner;c=n.end;continue;}}
     // "cada vez mais/menos (rápido)": a stated trend of the action.
     if(w==='cada'&&comp[c+1]?.w==='vez'&&/^(?:mais|menos)$/.test(comp[c+2]?.w??'')){rel.qualifiers.push(comp[c+2].w==='mais'?'INCREASING':'DECREASING');c+=3+(comp[c+3]&&ADVERB.test(comp[c+3].w)?1:0);continue;}
@@ -177,9 +201,11 @@ export function mechanismRelations(u:ScriptUnderstanding):MechRelation[]{
      if(reg&&/^d(?:e|o|a|os|as)$/.test(comp[q]?.w??'')){const n=take(q+1);if(n){rel.destination={text:raw.slice(comp[c+1].a-base,n.ref.end-base),start:comp[c+1].a,end:n.ref.end,head:n.ref.head,category:'REGION',region:reg};c=n.end;continue;}}}
     if(/^(?:de|do|da|dos|das)$/.test(w)&&comp[c+1]?.w==='dentro'){rel.source={text:'dentro',start:comp[c+1].a,end:comp[c+1].b,head:'dentro',category:'REGION',region:'INSIDE'};c+=2;continue;}
     if(/^(?:para|pra)$/.test(w)&&comp[c+1]&&/^(?:cima|baixo|frente|tras)$/.test(comp[c+1].w)){rel.direction=({cima:'UP',baixo:'DOWN'} as Record<string,'UP'|'DOWN'>)[comp[c+1].w];rel.qualifiers.push('DIRECTION:'+comp[c+1].w);c+=2;continue;}
-    if(/^(?:dentro|fora|atras|embaixo)$/.test(w)&&comp[c+1]&&/^d[oa]s?$/.test(comp[c+1].w)){const n=take(c+2);if(n){if(w==='dentro')insideRef=n.ref;rel.qualifiers.push((w==='dentro'?'INSIDE:':w==='fora'?'OUTSIDE:':w==='atras'?'BEHIND:':'BELOW:')+n.ref.head);c=n.end;continue;}}
+    if(/^(?:dentro|fora|atras|embaixo)$/.test(w)&&comp[c+1]&&/^d(?:e|o|a|os|as)$/.test(comp[c+1].w)){const n=take(c+2);if(n){if(w==='dentro')insideRef=n.ref;rel.qualifiers.push((w==='dentro'?'INSIDE:':w==='fora'?'OUTSIDE:':w==='atras'?'BEHIND:':'BELOW:')+n.ref.head);c=n.end;continue;}}
     if(/^(?:de|do|da|dos|das)$/.test(w)&&rel.type==='MOVE'){const n=take(c+1);if(n){rel.source=n.ref;c=n.end;continue;}}
     if(/^(?:para|pra)$/.test(w)&&comp[c+1]&&/^(?:fora|dentro)$/.test(comp[c+1].w)){rel.destination={text:comp[c+1].w,start:comp[c+1].a,end:comp[c+1].b,head:comp[c+1].w,category:'REGION',region:comp[c+1].w==='fora'?'OUTSIDE':'INSIDE'};c+=2;continue;}
+    // Right after a transfer verb, "a" is the article of its object ("recebe a X"), not "to".
+    if(c===c0&&w==='a'&&rel.type==='TRANSFER'&&!rel.object){const n=take(c);if(n){rel.object=n.ref;if(n.owner)rel.propertyOwner=n.owner;c=n.end;continue;}}
     if(/^(?:para|pra|ate|ao|aos|a)$/.test(w)&&(rel.type==='MOVE'||rel.type==='TRANSFER')){const n=take(c+1);if(n){rel.destination=n.ref;c=n.end;continue;}}
     if(w==='com'){const n=take(c+1);if(n){rel.qualifiers.push('WITH:'+n.ref.head);c=n.end;continue;}}
     if(w==='em'){let q=c+1;while(q<comp.length&&!/^(?:e|,)$/.test(comp[q].w))q++;rel.qualifiers.push('AT:'+raw.slice(comp[c+1]?.a-base,comp[q-1]?.b-base));c=q;continue;}
@@ -188,6 +214,8 @@ export function mechanismRelations(u:ScriptUnderstanding):MechRelation[]{
     if(/^(?:de|do|da|dos|das)$/.test(w)&&rel.type==='TRANSFER'){const n=take(c+1);if(n){rel.source=n.ref.category==='REGION'?{...n.ref,region:'INSIDE'}:n.ref;c=n.end;continue;}}
     // A state word is the clause's state only right after the verb ("fica quente", "volta frio", "volta a ser líquido"), never a noun's adjective.
     if(STATE_WORD.test(w)&&c===c0&&(rel.type==='STATE_CHANGE'||rel.type==='MOVE')){rel.after=STATE_NORM(w);if(rel.type==='MOVE')rel.qualifiers.push('ARRIVES_'+STATE_NORM(w));c++;continue;}
+    // An object pronoun ("coloca ela no X") stands for a single compatible noun of this or the previous sentence.
+    if(!rel.object&&PRON.test(w)){const r=resolve(null,true,/^ela/.test(w),/s$/.test(w));if(r){rel.object=r;}c++;continue;}
     if(!rel.object&&DET.test(w)||!rel.object&&!/^(?:em|com|o|a)$/.test(w)&&/^[a-z]/.test(w)&&!V.some(v=>v.re.test(w))&&!STATE_WORD.test(w)){const n=take(c);if(n){if(n.ref.category==='TIME'){rel.qualifiers.push('DURATION:'+raw.slice(n.ref.start-base,(comp[n.end]?.a??n.ref.end)-base).replace(/[,:;\s]+$/,''));c=n.end;continue;}
      rel.object=n.ref;if(n.owner)rel.propertyOwner=n.owner;lastObject={ref:n.ref,fem:n.fem};if(n.owner){here.push({ref:n.owner,fem:n.ownerFem??null});if(n.ref.category==='PROPERTY'||n.ref.category==='QUANTITY')lastObject={ref:n.owner,fem:n.ownerFem??null};}c=n.end;continue;}}
     c++;}
@@ -206,6 +234,12 @@ export function mechanismRelations(u:ScriptUnderstanding):MechRelation[]{
    if(rel.lemma==='BECOME'&&!rel.after&&insideRef&&!STATE_WORD.test(rel.object?.head??'')){rel.type='CONTAIN';rel.lemma='CONTAIN';rel.destination=insideRef;delete rel.object;}
    if(rel.lemma==='CONTAIN'&&verb.lemma==='CONTAIN'&&rel.object&&subject){rel.destination=subject;rel.subject=rel.object;delete rel.object;}
    if(rel.type==='CONTACT'&&!rel.destination)c=-1;
+   // FORM: "X formam uma Y" → the result is Y. CONVERT without its own input takes the coordinated one ("recebe a X e transforma em Y").
+   if(rel.type==='CONVERT'&&rel.lemma==='FORM'&&rel.object&&!rel.result){rel.result=rel.object;delete rel.object;}
+   if(rel.type==='CONVERT'&&rel.lemma==='CONVERT'&&!rel.object&&s>=vi&&(prevQuantity??prevMaterial))rel.object=Object.assign({},(prevQuantity??prevMaterial) as MechRef,{resolvedFrom:'COORDINATION'});
+   if(rel.type==='CONVERT'&&!rel.result)c=-1;
+   // Producing a quantity: the object is that quantity.
+   if(rel.type==='TRANSFER'&&rel.lemma==='PRODUCE'&&rel.object&&rel.object.category==='QUANTITY'){rel.quantity=rel.object;delete rel.object;}
    if(rel.type==='TRANSFER'&&rel.object&&(rel.object.category==='QUANTITY'||rel.object.category==='MATERIAL')){rel.quantity=rel.object;delete rel.object;}
    // "absorve o calor da X" / "tira o calor da X": the quantity's owner is where it is taken from.
    if(rel.type==='TRANSFER'&&(rel.lemma==='ABSORB'||rel.lemma==='REMOVE')&&rel.quantity&&rel.propertyOwner&&!rel.source){rel.source=rel.propertyOwner;delete rel.propertyOwner;}
@@ -231,7 +265,7 @@ export function mechanismRelations(u:ScriptUnderstanding):MechRelation[]{
    if(usable){rel.span.text=script.slice(rel.span.start,rel.span.end);rel.id='MR_'+seg.id+'_'+out.filter(r=>r.sentenceId===seg.id).length;out.push(JSON.parse(JSON.stringify(rel)) as MechRelation);
     if(pendingSub){const p=pendingSub,sub:MechRelation={id:rel.id+'_SUB',sentenceId:seg.id,type:p.verb.type,lemma:p.verb.lemma,span:{start:t[p.vi-1].a,end:t[p.vi].b,text:script.slice(t[p.vi-1].a,t[p.vi].b)},subject,predicate:{start:t[p.vi].a,end:t[p.vi].b,text:script.slice(t[p.vi].a,t[p.vi].b)},negated:false,modality:'ASSERTED',qualifiers:['TEMPORAL_SUBORDINATE'],...(p.state?{after:p.state}:{})};
      if(sub.type!=='STATE_CHANGE'||sub.after)out.splice(out.length-1,0,JSON.parse(JSON.stringify(sub)) as MechRelation);pendingSub=null;}}
-   if(rel.quantity)prevQuantity=rel.quantity;if(rel.object?.category==='MATERIAL')prevMaterial=rel.object;
+   if(rel.quantity)prevQuantity=rel.quantity;if(rel.object?.category==='QUANTITY')prevQuantity=rel.object;if(rel.object?.category==='MATERIAL')prevMaterial=rel.object;
    if(subject&&subject.category!=='PROPERTY'){lastSubject={ref:subject,fem:subjFem,pl:firstW&&PRON.test(firstW)?/s$/.test(firstW):subjPl};if(!subject.resolvedFrom?.startsWith('REL'))here.push(lastSubject);}
    k=end+(t[end]?.w===','||t[end]?.w==='e'&&!isAuxE(end)?1:0);if(t[k]?.w==='e'&&!isAuxE(k))k++;
   }

@@ -1,12 +1,12 @@
 import path from 'node:path';
 import {generateFromScript} from '../src/script-mode/generate';
-/** Script Mode product command: npm run clonai:script -- --script <file.txt> [--out <dir>] [--label <name>] [--no-render]
+/** Script Mode product command: npm run clonai:script -- --script <file.txt> [--out <dir>] [--label <name>] [--no-render] [--style explainer] [--hd]
  * Also accepts --script-text "<inline script>". The script is untrusted narrative text: it is never executed. */
 const args=process.argv.slice(2),get=(k:string)=>{const i=args.indexOf(k);return i>=0?args[i+1]:undefined;};
 const scriptPath=get('--script'),scriptText=get('--script-text');
 if(!scriptPath&&!scriptText){console.error('Usage: npm run clonai:script -- --script <file.txt> [--out <dir>] [--label <name>] [--no-render]');process.exit(2);}
 const outDir=get('--out')??path.join('out','engine3d','script-mode',path.basename(scriptPath??'inline',path.extname(scriptPath??'')));
-const r=await generateFromScript({scriptPath,scriptText,outDir,label:get('--label')??'video',render:!args.includes('--no-render')});
+const r=await generateFromScript({scriptPath,scriptText,outDir,label:get('--label')??'video',render:!args.includes('--no-render'),style:get('--style')==='explainer'?'EXPLAINER':'CLASSIC',hd:args.includes('--hd')});
 const s=r.summary,m=s.mp4 as {path?:string;duration?:number;passed?:boolean}|null;
 console.log(['ClonAI Script Mode — USER_SCRIPT → MP4',
  'video:      '+(m?.path??'(not rendered)'),

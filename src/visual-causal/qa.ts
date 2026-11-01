@@ -121,7 +121,7 @@ export function pointStatus(plan:VisualCausalPlan,seq:DirectedSequence,f:number,
   const ignore=new Set(targets.map(t=>t.entityId)),open=new Set(plan.world.entities.filter(e=>e.assembly==='ENCLOSURE'&&Number(ds?.subjects[e.entityId]?.parameters.activity??0)>=0.5).map(e=>e.entityId));
   const status=(p:Vec3)=>{const s=projectPosition(p,cam,seq.width,seq.height);if(!(s.x>0.02&&s.x<0.98&&s.y>0.02&&s.y<0.98&&s.depth<1))return'OUT_OF_FRAME';
    if(space&&blockersOnSight(cam.position,p,space,ignore,open).length)return'OCCLUDED';
-   const solids=plan.world.entities.filter(e=>['BOX','CYLINDER'].includes(e.kind)&&!targets.includes(e)&&!['STATE_TINT','INTERIOR_ROOM','STUDIO_BACKDROP','CLOUD_FIELD','WATER_SURFACE','ROAD_STRIP','STREAMLINES','PRESSURE_FIELD','FORCE_ARROW','ROTATING_CONTAINER','OUTER_CONTAINER','CONTENT_ITEMS'].includes(e.assembly??'')&&ds?.subjects[e.entityId]?.visible!==false&&!(e.assembly==='ENCLOSURE'&&Number(ds?.subjects[e.entityId]?.parameters.activity??0)>=0.5));
+   const solids=plan.world.entities.filter(e=>['BOX','CYLINDER'].includes(e.kind)&&!targets.includes(e)&&!['STATE_TINT','INTERIOR_ROOM','STUDIO_BACKDROP','CLOUD_FIELD','WATER_SURFACE','ROAD_STRIP','STREAMLINES','PRESSURE_FIELD','FORCE_ARROW','ROTATING_CONTAINER','OUTER_CONTAINER','CONTENT_ITEMS','NEIGHBORHOOD','RADIANT_SOURCE'].includes(e.assembly??'')&&ds?.subjects[e.entityId]?.visible!==false&&!(e.assembly==='ENCLOSURE'&&Number(ds?.subjects[e.entityId]?.parameters.activity??0)>=0.5));
    if(solids.some(o=>{const c=pos(o),h=o.size.map(v=>v/2*0.95),lo=c.map((v,i)=>v-h[i]) as Vec3,hi=c.map((v,i)=>v+h[i]) as Vec3;return!insideBox(p,lo,hi)&&segmentHits(cam.position,p,lo,hi);}))return'OCCLUDED';return'VISIBLE';};
  return status(p);
 }
